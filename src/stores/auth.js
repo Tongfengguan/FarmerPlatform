@@ -19,7 +19,7 @@ const defaultAccounts = [
     account: 'tfgkk',
     password: '123456',
     role: 'admin',
-    phone: '00000000000',
+    phone: '13900000000',
     nickname: '平台管理员',
     platformProfileId: null,
   },
@@ -28,6 +28,7 @@ const defaultAccounts = [
 const getStoredAccounts = () => {
   const raw = localStorage.getItem(accountsKey)
   if (!raw) return defaultAccounts
+
   try {
     return JSON.parse(raw)
   } catch {
@@ -38,6 +39,7 @@ const getStoredAccounts = () => {
 const getStoredSession = () => {
   const raw = localStorage.getItem(storageKey)
   if (!raw) return null
+
   try {
     return JSON.parse(raw)
   } catch {
@@ -68,6 +70,31 @@ export const useAuthStore = defineStore('auth', {
     persistAccounts() {
       localStorage.setItem(accountsKey, JSON.stringify(this.accounts))
     },
+    syncUserProfile(accountInfo) {
+      if (accountInfo.role !== 'user') return
+
+      const platformStore = usePlatformStore()
+      const existingAddressBook = platformStore.currentUser.addressBook || []
+
+      platformStore.setCurrentUser({
+        id: accountInfo.platformProfileId ?? 1001,
+        name: accountInfo.account,
+        phone: accountInfo.phone,
+        nickname: accountInfo.nickname || accountInfo.account,
+        avatar: accountInfo.account.slice(0, 1),
+        addressBook: existingAddressBook.length
+          ? existingAddressBook
+          : [
+              {
+                id: 1,
+                name: accountInfo.account,
+                phone: accountInfo.phone,
+                address: '请在个人中心补充收货地址',
+                isDefault: true,
+              },
+            ],
+      })
+    },
     login({ account, password, remember = true }) {
       const matched = this.accounts.find(
         (item) => item.account === account.trim() && item.password === password,
@@ -83,28 +110,7 @@ export const useAuthStore = defineStore('auth', {
         remember,
       }
 
-      const platformStore = usePlatformStore()
-      if (matched.role === 'user') {
-        const existingAddressBook = platformStore.currentUser.addressBook || []
-        platformStore.setCurrentUser({
-          id: matched.platformProfileId ?? 1001,
-          name: matched.account,
-          phone: matched.phone,
-          nickname: matched.nickname || matched.account,
-          avatar: matched.account.slice(0, 1),
-          addressBook: existingAddressBook.length
-            ? existingAddressBook
-            : [
-                {
-                  id: 1,
-                  name: matched.account,
-                  phone: matched.phone,
-                  address: '请在个人中心补充收货地址',
-                  isDefault: true,
-                },
-              ],
-        })
-      }
+      this.syncUserProfile(matched)
 
       if (remember) this.persistSession()
       else localStorage.removeItem(storageKey)
@@ -113,7 +119,9 @@ export const useAuthStore = defineStore('auth', {
     },
     register({ account, phone, password, nickname }) {
       const normalized = account.trim()
+
       if (!normalized) throw new Error('账号不能为空')
+      if (!phone.trim()) throw new Error('手机号不能为空')
 
       if (this.accounts.some((item) => item.account === normalized)) {
         throw new Error('该账号已存在')
@@ -138,13 +146,38 @@ export const useAuthStore = defineStore('auth', {
 
       this.accounts.unshift(newAccount)
       this.persistAccounts()
+
       this.session = {
         account: newAccount.account,
         role: newAccount.role,
         remember: true,
       }
       this.persistSession()
+      this.syncUserProfile(newAccount)
+
       return newAccount
+    },
+    resetPassword({ account, phone, code, nextPassword, expectedCode }) {
+      const normalized = account.trim()
+      const matched = this.accounts.find(
+        (item) => item.account === normalized && item.phone === phone.trim(),
+      )
+
+      if (!matched) {
+        throw new Error('账号和手机号不匹配')
+      }
+
+      if (code !== expectedCode) {
+        throw new Error('验证码错误')
+      }
+
+      if (!nextPassword || nextPassword.length < 6) {
+        throw new Error('新密码至少需要 6 位')
+      }
+
+      matched.password = nextPassword
+      this.persistAccounts()
+      return true
     },
     logout() {
       this.session = null

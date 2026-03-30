@@ -9,6 +9,7 @@ const authStore = useAuthStore()
 const tab = ref('login')
 const errorMessage = ref('')
 const successMessage = ref('')
+const forgotVisible = ref(false)
 
 const loginForm = reactive({
   account: '',
@@ -24,11 +25,24 @@ const registerForm = reactive({
   remember: true,
 })
 
-const fakeCode = ref('246810')
+const forgotForm = reactive({
+  account: '',
+  phone: '',
+  code: '',
+  nextPassword: '',
+})
 
-const handleLogin = () => {
+const registerCode = ref('246810')
+const forgotCode = ref('135790')
+
+const clearMessages = () => {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+const handleLogin = () => {
+  clearMessages()
+
   try {
     const role = authStore.login(loginForm)
     router.push(role === 'admin' ? '/admin/dashboard' : '/')
@@ -38,10 +52,9 @@ const handleLogin = () => {
 }
 
 const handleRegister = () => {
-  errorMessage.value = ''
-  successMessage.value = ''
+  clearMessages()
 
-  if (registerForm.code !== fakeCode.value) {
+  if (registerForm.code !== registerCode.value) {
     errorMessage.value = '验证码错误，请输入页面展示的模拟验证码'
     return
   }
@@ -55,6 +68,26 @@ const handleRegister = () => {
     })
     successMessage.value = '注册成功，已自动登录 user 角色账号'
     router.push('/')
+  } catch (error) {
+    errorMessage.value = error.message
+  }
+}
+
+const handleResetPassword = () => {
+  clearMessages()
+
+  try {
+    authStore.resetPassword({
+      account: forgotForm.account,
+      phone: forgotForm.phone,
+      code: forgotForm.code,
+      nextPassword: forgotForm.nextPassword,
+      expectedCode: forgotCode.value,
+    })
+    forgotVisible.value = false
+    loginForm.account = forgotForm.account
+    loginForm.password = forgotForm.nextPassword
+    successMessage.value = '密码重置成功，请使用新密码登录'
   } catch (error) {
     errorMessage.value = error.message
   }
@@ -92,7 +125,7 @@ const handleRegister = () => {
             <input v-model="loginForm.remember" type="checkbox" />
             <span>记住我</span>
           </label>
-          <span class="hint">测试密码均为 123456</span>
+          <button class="link-btn" type="button" @click="forgotVisible = true">忘记密码？</button>
         </div>
 
         <button class="submit-btn" @click="handleLogin">登录</button>
@@ -108,7 +141,7 @@ const handleRegister = () => {
             class="auth-input"
             placeholder="请输入短信验证码"
           />
-          <button class="code-btn" type="button">验证码 {{ fakeCode }}</button>
+          <button class="code-btn" type="button">验证码 {{ registerCode }}</button>
         </div>
 
         <input
@@ -133,6 +166,36 @@ const handleRegister = () => {
 
       <p v-if="errorMessage" class="message error">{{ errorMessage }}</p>
       <p v-if="successMessage" class="message success">{{ successMessage }}</p>
+    </div>
+
+    <div v-if="forgotVisible" class="modal-mask" @click.self="forgotVisible = false">
+      <div class="forgot-card">
+        <h2>忘记密码</h2>
+        <p class="modal-tip">输入账号、手机号和验证码后即可重置密码。</p>
+        <div class="auth-panel">
+          <input v-model="forgotForm.account" class="auth-input" placeholder="请输入账号" />
+          <input v-model="forgotForm.phone" class="auth-input" placeholder="请输入手机号" />
+
+          <div class="auth-code-row">
+            <input v-model="forgotForm.code" class="auth-input" placeholder="请输入短信验证码" />
+            <button class="code-btn" type="button">验证码 {{ forgotCode }}</button>
+          </div>
+
+          <input
+            v-model="forgotForm.nextPassword"
+            class="auth-input"
+            type="password"
+            placeholder="请输入新密码（至少 6 位）"
+          />
+        </div>
+
+        <div class="forgot-actions">
+          <button class="ghost-btn" type="button" @click="forgotVisible = false">取消</button>
+          <button class="submit-btn compact" type="button" @click="handleResetPassword">
+            确认重置
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -232,12 +295,17 @@ const handleRegister = () => {
   gap: 8px;
 }
 
-.hint {
+.link-btn {
+  background: transparent;
   color: #20b485;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
 }
 
 .submit-btn,
-.code-btn {
+.code-btn,
+.ghost-btn {
   border: 0;
   cursor: pointer;
 }
@@ -253,6 +321,12 @@ const handleRegister = () => {
 
 .submit-btn:hover {
   background: #22956f;
+}
+
+.compact {
+  height: 50px;
+  min-width: 160px;
+  font-size: 18px;
 }
 
 .auth-code-row {
@@ -288,5 +362,46 @@ const handleRegister = () => {
 
 .message.success {
   color: #8bf0c8;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.54);
+  padding: 24px;
+}
+
+.forgot-card {
+  width: min(100%, 520px);
+  padding: 28px;
+  border-radius: 18px;
+  background: rgba(2, 10, 7, 0.98);
+  border: 1px solid rgba(240, 246, 244, 0.35);
+}
+
+.forgot-card h2 {
+  margin: 0 0 8px;
+}
+
+.modal-tip {
+  margin: 0 0 22px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.forgot-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ghost-btn {
+  min-width: 100px;
+  height: 50px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 </style>
