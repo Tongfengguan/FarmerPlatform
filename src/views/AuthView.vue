@@ -136,11 +136,7 @@ const handleResetPassword = () => {
         <input v-model="registerForm.phone" class="auth-input" placeholder="请输入手机号" />
 
         <div class="auth-code-row">
-          <input
-            v-model="registerForm.code"
-            class="auth-input"
-            placeholder="请输入短信验证码"
-          />
+          <input v-model="registerForm.code" class="auth-input" placeholder="请输入短信验证码" />
           <button class="code-btn" type="button">验证码 {{ registerCode }}</button>
         </div>
 
@@ -206,8 +202,7 @@ const handleResetPassword = () => {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at top left, rgba(35, 176, 125, 0.1), transparent 34%),
-    #163e30;
+    radial-gradient(circle at top left, rgba(35, 176, 125, 0.1), transparent 34%), #163e30;
   padding: 24px;
 }
 
@@ -254,7 +249,7 @@ const handleResetPassword = () => {
 }
 
 .auth-tabs button.active {
-  color: #ffffff;
+  color: #fff;
 }
 
 .auth-panel {
