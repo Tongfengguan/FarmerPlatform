@@ -1,7 +1,10 @@
 <script setup>
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const adminNav = [
   { label: '数据概览', to: '/admin/dashboard', group: '运营管理' },
@@ -12,6 +15,11 @@ const adminNav = [
 ]
 
 const navGroups = Array.from(new Set(adminNav.map((item) => item.group)))
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/auth')
+}
 </script>
 
 <template>
@@ -25,8 +33,9 @@ const navGroups = Array.from(new Set(adminNav.map((item) => item.group)))
         </div>
       </div>
       <div class="admin-topbar__tools">
-        <span class="muted">平台管理员</span>
+        <span class="muted">{{ authStore.accountName || '平台管理员' }}</span>
         <RouterLink class="btn btn-ghost" to="/">回到用户端</RouterLink>
+        <button class="btn btn-primary" @click="handleLogout">退出登录</button>
       </div>
     </header>
 

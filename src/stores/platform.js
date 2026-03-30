@@ -6,7 +6,7 @@ import {
   initialOrders,
   initialProducts,
   initialUsers,
-} from '../data/mockData'
+} from '../data/mockData.js'
 
 const nextId = (items, fallback = 1) => {
   if (!items.length) return fallback
@@ -18,13 +18,14 @@ const orderId = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`
 export const usePlatformStore = defineStore('platform', {
   state: () => ({
     dashboard: dashboardStats,
-    currentUser,
+    currentUser: JSON.parse(JSON.stringify(currentUser)),
     articles: initialArticles,
     products: initialProducts,
     users: initialUsers,
     orders: initialOrders,
     cart: [],
-    latestArticleTip: initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
+    latestArticleTip:
+      initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
   }),
   getters: {
     publishedArticles(state) {
@@ -44,6 +45,42 @@ export const usePlatformStore = defineStore('platform', {
     },
   },
   actions: {
+    setCurrentUser(profile) {
+      this.currentUser = JSON.parse(JSON.stringify(profile))
+    },
+    registerUserAccount({ account, phone, nickname }) {
+      const userId = nextId(this.users, 1001)
+      const profile = {
+        id: userId,
+        name: account,
+        phone,
+        nickname: nickname || account,
+        avatar: account.slice(0, 1),
+        addressBook: [
+          {
+            id: 1,
+            name: account,
+            phone,
+            address: '请在个人中心补充收货地址',
+            isDefault: true,
+          },
+        ],
+      }
+
+      this.users.unshift({
+        id: userId,
+        name: account,
+        phone,
+        status: '正常',
+        createdAt: new Date().toISOString().slice(0, 10),
+        orders: 0,
+        spend: 0,
+        lastActive: new Date().toISOString().slice(0, 10),
+      })
+
+      this.setCurrentUser(profile)
+      return profile
+    },
     dismissLatestTip() {
       this.latestArticleTip = null
     },
@@ -69,8 +106,7 @@ export const usePlatformStore = defineStore('platform', {
     toggleArticleStatus(id) {
       const article = this.articles.find((item) => item.id === id)
       if (!article) return
-      if (article.status === '已发布') article.status = '已下架'
-      else article.status = '已发布'
+      article.status = article.status === '已发布' ? '已下架' : '已发布'
     },
     addProduct(payload) {
       this.products.unshift({
@@ -89,7 +125,9 @@ export const usePlatformStore = defineStore('platform', {
       product.status = product.status === '销售中' ? '已下架' : '销售中'
     },
     addToCart(product, skuName, quantity) {
-      const existing = this.cart.find((item) => item.productId === product.id && item.sku === skuName)
+      const existing = this.cart.find(
+        (item) => item.productId === product.id && item.sku === skuName,
+      )
       if (existing) {
         existing.quantity += quantity
       } else {
@@ -105,15 +143,21 @@ export const usePlatformStore = defineStore('platform', {
       }
     },
     updateCartItem(productId, sku, quantity) {
-      const item = this.cart.find((entry) => entry.productId === productId && entry.sku === sku)
+      const item = this.cart.find(
+        (entry) => entry.productId === productId && entry.sku === sku,
+      )
       if (item) item.quantity = Math.max(1, quantity)
     },
     toggleCartSelection(productId, sku) {
-      const item = this.cart.find((entry) => entry.productId === productId && entry.sku === sku)
+      const item = this.cart.find(
+        (entry) => entry.productId === productId && entry.sku === sku,
+      )
       if (item) item.selected = !item.selected
     },
     removeCartItem(productId, sku) {
-      this.cart = this.cart.filter((item) => !(item.productId === productId && item.sku === sku))
+      this.cart = this.cart.filter(
+        (item) => !(item.productId === productId && item.sku === sku),
+      )
     },
     checkoutSelected() {
       const selectedItems = this.cart.filter((item) => item.selected)

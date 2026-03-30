@@ -1,10 +1,13 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { usePlatformStore } from '../stores/platform'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const store = usePlatformStore()
+const authStore = useAuthStore()
 
 const navItems = [
   { label: '首页', to: '/' },
@@ -16,6 +19,11 @@ const navItems = [
 
 const latestTip = computed(() => store.latestArticleTip)
 const cartCount = computed(() => store.cartCount)
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/auth')
+}
 </script>
 
 <template>
@@ -36,7 +44,20 @@ const cartCount = computed(() => store.cartCount)
         </nav>
         <div class="user-tools">
           <RouterLink class="btn btn-ghost" to="/cart">购物车 {{ cartCount }}</RouterLink>
-          <RouterLink class="btn btn-primary" to="/admin/dashboard">进入管理端</RouterLink>
+          <RouterLink
+            v-if="authStore.role === 'admin'"
+            class="btn btn-primary"
+            to="/admin/dashboard"
+          >
+            进入管理端
+          </RouterLink>
+          <RouterLink v-if="!authStore.isLoggedIn" class="btn btn-primary" to="/auth">
+            登录 / 注册
+          </RouterLink>
+          <template v-else>
+            <span class="account-tag">{{ authStore.accountName }}</span>
+            <button class="btn btn-ghost" @click="handleLogout">退出</button>
+          </template>
         </div>
       </div>
     </header>
@@ -111,6 +132,16 @@ const cartCount = computed(() => store.cartCount)
 .user-tools {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.account-tag {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(35, 176, 125, 0.14);
+  color: #9cf4cf;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .tip-banner {
