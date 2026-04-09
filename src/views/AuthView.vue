@@ -59,7 +59,7 @@ const withLoading = async (action) => {
 const handleLogin = async () => {
   await withLoading(async () => {
     const role = await authStore.login(loginForm)
-    await platformStore.bootstrapPrivate(role)
+    await platformStore.bootstrapPrivate(role, authStore.session)
     successMessage.value = '登录成功，正在进入平台'
     router.push(role === 'admin' ? '/admin/dashboard' : '/')
   })
@@ -79,7 +79,7 @@ const handleRegister = async () => {
       remember: registerForm.remember,
     })
 
-    await platformStore.bootstrapPrivate('user')
+    await platformStore.bootstrapPrivate('user', authStore.session)
     successMessage.value = '注册成功，已自动登录 user 账号'
     router.push('/')
   })

@@ -29,7 +29,7 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isLoggedIn(state) {
-      return Boolean(state.session)
+      return Boolean(state.session?.token)
     },
     role(state) {
       return state.session?.role ?? 'guest'
@@ -57,19 +57,18 @@ export const useAuthStore = defineStore('auth', {
       else localStorage.removeItem(storageKey)
     },
     syncUserProfile(accountInfo) {
-      if (accountInfo.role !== 'user') return
-
       const platformStore = usePlatformStore()
       const existingUser = platformStore.users.find((item) => item.phone === accountInfo.phone)
-      const profileId = accountInfo.id ?? existingUser?.id ?? Date.now()
       const existingAddressBook =
         platformStore.currentUser.phone === accountInfo.phone
           ? platformStore.currentUser.addressBook || []
-          : []
+          : accountInfo.role === 'user'
+            ? [defaultAddress(accountInfo.account, accountInfo.phone)]
+            : []
 
-      if (!existingUser) {
+      if (accountInfo.role === 'user' && !existingUser) {
         platformStore.users.unshift({
-          id: profileId,
+          id: accountInfo.id ?? Date.now(),
           name: accountInfo.account,
           phone: accountInfo.phone,
           status: '正常',
@@ -80,16 +79,7 @@ export const useAuthStore = defineStore('auth', {
         })
       }
 
-      platformStore.setCurrentUser({
-        id: profileId,
-        name: accountInfo.account,
-        phone: accountInfo.phone,
-        nickname: accountInfo.nickname || accountInfo.account,
-        avatar: accountInfo.account.slice(0, 1),
-        addressBook: existingAddressBook.length
-          ? existingAddressBook
-          : [defaultAddress(accountInfo.account, accountInfo.phone)],
-      })
+      platformStore.syncCurrentUser(accountInfo, existingAddressBook)
     },
     async login({ account, password, remember = true }) {
       const data = await postJson('/api/auth/login', {
@@ -127,6 +117,11 @@ export const useAuthStore = defineStore('auth', {
       return true
     },
     async bootstrap() {
+      if (this.session && !this.session.token) {
+        this.logout()
+        return
+      }
+
       if (!this.session?.token) return
 
       try {

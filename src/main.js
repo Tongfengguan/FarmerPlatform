@@ -17,8 +17,9 @@ const platformStore = usePlatformStore(pinia)
 
 await platformStore.bootstrapPublic()
 await authStore.bootstrap()
-if (authStore.isLoggedIn) {
-  await platformStore.bootstrapPrivate(authStore.role)
+
+if (authStore.session?.token) {
+  await platformStore.bootstrapPrivate(authStore.role, authStore.session)
 }
 
 app.use(router)

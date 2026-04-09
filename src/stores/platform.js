@@ -33,6 +33,17 @@ export const usePlatformStore = defineStore('platform', {
     },
   },
   actions: {
+    syncCurrentUser(accountInfo, addressBook = null) {
+      const nextAddressBook = addressBook ?? this.currentUser.addressBook ?? []
+      this.currentUser = {
+        id: accountInfo.id ?? this.currentUser.id,
+        name: accountInfo.account ?? this.currentUser.name,
+        phone: accountInfo.phone ?? this.currentUser.phone,
+        nickname: accountInfo.nickname || accountInfo.account || this.currentUser.nickname,
+        avatar: (accountInfo.account || this.currentUser.name || '农').slice(0, 1),
+        addressBook: nextAddressBook,
+      }
+    },
     applyBootstrap(data) {
       this.dashboard = data.dashboard ?? this.dashboard
       this.articles = data.articles ?? this.articles
@@ -46,8 +57,13 @@ export const usePlatformStore = defineStore('platform', {
       const data = await getJson('/api/platform/bootstrap')
       this.applyBootstrap(data)
     },
-    async bootstrapPrivate(role = 'user') {
-      this.currentUser.addressBook = await getJson('/api/platform/addresses')
+    async bootstrapPrivate(role = 'user', accountInfo = null) {
+      const addresses = await getJson('/api/platform/addresses')
+      if (accountInfo) {
+        this.syncCurrentUser(accountInfo, addresses)
+      } else {
+        this.currentUser.addressBook = addresses
+      }
       this.orders = await getJson('/api/platform/orders')
 
       if (role === 'admin') {
@@ -153,7 +169,8 @@ export const usePlatformStore = defineStore('platform', {
       this.users = await patchJson(`/api/admin/users/${id}/toggle-status`)
     },
     async addAddress(address) {
-      this.currentUser.addressBook = await postJson('/api/platform/addresses', address)
+      const addresses = await postJson('/api/platform/addresses', address)
+      this.syncCurrentUser(this.currentUser, addresses)
     },
     resetClientState() {
       this.cart = []

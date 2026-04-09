@@ -53,7 +53,6 @@ const submitAddress = async () => {
     <div class="card address-card">
       <div class="section-title">
         <h2>收货地址</h2>
-        <span class="muted">这里已经接到后端，可继续新增默认地址。</span>
       </div>
       <div class="address-form">
         <input v-model="form.name" class="field" placeholder="收货人" />
