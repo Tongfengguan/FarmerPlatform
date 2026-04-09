@@ -10,8 +10,8 @@ const selectedTotal = computed(() =>
   store.cart.reduce((sum, item) => (item.selected ? sum + item.price * item.quantity : sum), 0),
 )
 
-const handleCheckout = () => {
-  const success = store.checkoutSelected()
+const handleCheckout = async () => {
+  const success = await store.checkoutSelected()
   if (success) router.push('/orders')
 }
 </script>

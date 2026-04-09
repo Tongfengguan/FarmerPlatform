@@ -2,14 +2,17 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { usePlatformStore } from '../stores/platform'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const platformStore = usePlatformStore()
 
 const tab = ref('login')
 const errorMessage = ref('')
 const successMessage = ref('')
 const forgotVisible = ref(false)
+const loading = ref(false)
 
 const loginForm = reactive({
   account: '',
@@ -40,57 +43,63 @@ const clearMessages = () => {
   successMessage.value = ''
 }
 
-const handleLogin = () => {
+const withLoading = async (action) => {
+  loading.value = true
   clearMessages()
 
   try {
-    const role = authStore.login(loginForm)
-    router.push(role === 'admin' ? '/admin/dashboard' : '/')
+    await action()
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = error.message || '操作失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 
-const handleRegister = () => {
-  clearMessages()
+const handleLogin = async () => {
+  await withLoading(async () => {
+    const role = await authStore.login(loginForm)
+    await platformStore.bootstrapPrivate(role)
+    successMessage.value = '登录成功，正在进入平台'
+    router.push(role === 'admin' ? '/admin/dashboard' : '/')
+  })
+}
 
-  if (registerForm.code !== registerCode.value) {
-    errorMessage.value = '验证码错误，请输入页面展示的模拟验证码'
-    return
-  }
+const handleRegister = async () => {
+  await withLoading(async () => {
+    if (registerForm.code !== registerCode.value) {
+      throw new Error('验证码错误，请输入页面展示的模拟验证码')
+    }
 
-  try {
-    authStore.register({
+    await authStore.register({
       account: registerForm.account,
       phone: registerForm.phone,
       password: registerForm.password || '123456',
       nickname: registerForm.account,
+      remember: registerForm.remember,
     })
-    successMessage.value = '注册成功，已自动登录 user 角色账号'
+
+    await platformStore.bootstrapPrivate('user')
+    successMessage.value = '注册成功，已自动登录 user 账号'
     router.push('/')
-  } catch (error) {
-    errorMessage.value = error.message
-  }
+  })
 }
 
-const handleResetPassword = () => {
-  clearMessages()
-
-  try {
-    authStore.resetPassword({
+const handleResetPassword = async () => {
+  await withLoading(async () => {
+    await authStore.resetPassword({
       account: forgotForm.account,
       phone: forgotForm.phone,
       code: forgotForm.code,
       nextPassword: forgotForm.nextPassword,
       expectedCode: forgotCode.value,
     })
+
     forgotVisible.value = false
     loginForm.account = forgotForm.account
     loginForm.password = forgotForm.nextPassword
     successMessage.value = '密码重置成功，请使用新密码登录'
-  } catch (error) {
-    errorMessage.value = error.message
-  }
+  })
 }
 </script>
 
@@ -128,7 +137,9 @@ const handleResetPassword = () => {
           <button class="link-btn" type="button" @click="forgotVisible = true">忘记密码？</button>
         </div>
 
-        <button class="submit-btn" @click="handleLogin">登录</button>
+        <button class="submit-btn" :disabled="loading" @click="handleLogin">
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
       </div>
 
       <div v-else class="auth-panel">
@@ -152,7 +163,9 @@ const handleResetPassword = () => {
           <span>记住我</span>
         </label>
 
-        <button class="submit-btn" @click="handleRegister">注册并登录</button>
+        <button class="submit-btn" :disabled="loading" @click="handleRegister">
+          {{ loading ? '提交中...' : '注册并登录' }}
+        </button>
       </div>
 
       <div class="auth-footer">
@@ -187,8 +200,8 @@ const handleResetPassword = () => {
 
         <div class="forgot-actions">
           <button class="ghost-btn" type="button" @click="forgotVisible = false">取消</button>
-          <button class="submit-btn compact" type="button" @click="handleResetPassword">
-            确认重置
+          <button class="submit-btn compact" :disabled="loading" type="button" @click="handleResetPassword">
+            {{ loading ? '提交中...' : '确认重置' }}
           </button>
         </div>
       </div>
@@ -316,6 +329,13 @@ const handleResetPassword = () => {
 
 .submit-btn:hover {
   background: #22956f;
+}
+
+.submit-btn:disabled,
+.ghost-btn:disabled,
+.code-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .compact {

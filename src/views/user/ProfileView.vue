@@ -1,10 +1,26 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import { usePlatformStore } from '../../stores/platform'
 
 const store = usePlatformStore()
 const user = computed(() => store.currentUser)
-const addressBook = computed(() => user.value.addressBook)
+const addressBook = computed(() => user.value.addressBook || [])
+const defaultAddress = computed(() => addressBook.value.find((item) => item.isDefault))
+const form = reactive({
+  name: '',
+  phone: '',
+  address: '',
+  isDefault: false,
+})
+
+const submitAddress = async () => {
+  if (!form.name || !form.phone || !form.address) return
+  await store.addAddress({ ...form })
+  form.name = ''
+  form.phone = ''
+  form.address = ''
+  form.isDefault = false
+}
 </script>
 
 <template>
@@ -29,7 +45,7 @@ const addressBook = computed(() => user.value.addressBook)
         </div>
         <div class="profile-stat">
           <span class="muted">默认收货地址</span>
-          <strong>{{ addressBook.find((item) => item.isDefault)?.address.slice(0, 8) }}...</strong>
+          <strong>{{ defaultAddress ? `${defaultAddress.address.slice(0, 8)}...` : '待补充' }}</strong>
         </div>
       </div>
     </div>
@@ -37,7 +53,17 @@ const addressBook = computed(() => user.value.addressBook)
     <div class="card address-card">
       <div class="section-title">
         <h2>收货地址</h2>
-        <span class="muted">当前基础版本展示地址管理结果，后续可继续补增删改查表单。</span>
+        <span class="muted">这里已经接到后端，可继续新增默认地址。</span>
+      </div>
+      <div class="address-form">
+        <input v-model="form.name" class="field" placeholder="收货人" />
+        <input v-model="form.phone" class="field" placeholder="手机号" />
+        <input v-model="form.address" class="field" placeholder="详细地址" />
+        <label class="muted form-check">
+          <input v-model="form.isDefault" type="checkbox" />
+          <span>设为默认地址</span>
+        </label>
+        <button class="btn btn-primary" @click="submitAddress">新增地址</button>
       </div>
       <div class="address-list">
         <div v-for="address in addressBook" :key="address.id" class="address-item">
@@ -118,6 +144,19 @@ const addressBook = computed(() => user.value.addressBook)
 .address-list {
   display: grid;
   gap: 14px;
+}
+
+.address-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .address-item {

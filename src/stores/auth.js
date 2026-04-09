@@ -1,40 +1,8 @@
 import { defineStore } from 'pinia'
 import { usePlatformStore } from './platform.js'
+import { getJson, postJson } from '../utils/http.js'
 
 const storageKey = 'farmer-platform-auth'
-const accountsKey = 'farmer-platform-accounts'
-
-const defaultAccounts = [
-  {
-    id: 'user-seed',
-    account: '张大农',
-    password: '123456',
-    role: 'user',
-    phone: '13800008821',
-    nickname: '丰收老张',
-    platformProfileId: 1001,
-  },
-  {
-    id: 'admin-seed',
-    account: 'tfgkk',
-    password: '123456',
-    role: 'admin',
-    phone: '13900000000',
-    nickname: '平台管理员',
-    platformProfileId: null,
-  },
-]
-
-const getStoredAccounts = () => {
-  const raw = localStorage.getItem(accountsKey)
-  if (!raw) return defaultAccounts
-
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return defaultAccounts
-  }
-}
 
 const getStoredSession = () => {
   const raw = localStorage.getItem(storageKey)
@@ -47,10 +15,17 @@ const getStoredSession = () => {
   }
 }
 
+const defaultAddress = (account, phone) => ({
+  id: 1,
+  name: account,
+  phone,
+  address: '请在个人中心补充收货地址',
+  isDefault: true,
+})
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     session: getStoredSession(),
-    accounts: getStoredAccounts(),
   }),
   getters: {
     isLoggedIn(state) {
@@ -67,119 +42,104 @@ export const useAuthStore = defineStore('auth', {
     persistSession() {
       localStorage.setItem(storageKey, JSON.stringify(this.session))
     },
-    persistAccounts() {
-      localStorage.setItem(accountsKey, JSON.stringify(this.accounts))
+    applySession(accountInfo, remember = true) {
+      this.session = {
+        id: accountInfo.id,
+        account: accountInfo.account,
+        nickname: accountInfo.nickname,
+        phone: accountInfo.phone,
+        role: accountInfo.role,
+        token: accountInfo.token || this.session?.token || '',
+        remember,
+      }
+
+      if (remember) this.persistSession()
+      else localStorage.removeItem(storageKey)
     },
     syncUserProfile(accountInfo) {
       if (accountInfo.role !== 'user') return
 
       const platformStore = usePlatformStore()
-      const existingAddressBook = platformStore.currentUser.addressBook || []
+      const existingUser = platformStore.users.find((item) => item.phone === accountInfo.phone)
+      const profileId = accountInfo.id ?? existingUser?.id ?? Date.now()
+      const existingAddressBook =
+        platformStore.currentUser.phone === accountInfo.phone
+          ? platformStore.currentUser.addressBook || []
+          : []
+
+      if (!existingUser) {
+        platformStore.users.unshift({
+          id: profileId,
+          name: accountInfo.account,
+          phone: accountInfo.phone,
+          status: '正常',
+          createdAt: new Date().toISOString().slice(0, 10),
+          orders: 0,
+          spend: 0,
+          lastActive: new Date().toISOString().slice(0, 10),
+        })
+      }
 
       platformStore.setCurrentUser({
-        id: accountInfo.platformProfileId ?? 1001,
+        id: profileId,
         name: accountInfo.account,
         phone: accountInfo.phone,
         nickname: accountInfo.nickname || accountInfo.account,
         avatar: accountInfo.account.slice(0, 1),
         addressBook: existingAddressBook.length
           ? existingAddressBook
-          : [
-              {
-                id: 1,
-                name: accountInfo.account,
-                phone: accountInfo.phone,
-                address: '请在个人中心补充收货地址',
-                isDefault: true,
-              },
-            ],
+          : [defaultAddress(accountInfo.account, accountInfo.phone)],
       })
     },
-    login({ account, password, remember = true }) {
-      const matched = this.accounts.find(
-        (item) => item.account === account.trim() && item.password === password,
-      )
-
-      if (!matched) {
-        throw new Error('账号或密码错误')
-      }
-
-      this.session = {
-        account: matched.account,
-        role: matched.role,
-        remember,
-      }
-
-      this.syncUserProfile(matched)
-
-      if (remember) this.persistSession()
-      else localStorage.removeItem(storageKey)
-
-      return matched.role
-    },
-    register({ account, phone, password, nickname }) {
-      const normalized = account.trim()
-
-      if (!normalized) throw new Error('账号不能为空')
-      if (!phone.trim()) throw new Error('手机号不能为空')
-
-      if (this.accounts.some((item) => item.account === normalized)) {
-        throw new Error('该账号已存在')
-      }
-
-      const platformStore = usePlatformStore()
-      const profile = platformStore.registerUserAccount({
-        account: normalized,
-        phone,
-        nickname: nickname || normalized,
+    async login({ account, password, remember = true }) {
+      const data = await postJson('/api/auth/login', {
+        account: account.trim(),
+        password,
       })
 
-      const newAccount = {
-        id: `user-${Date.now()}`,
-        account: normalized,
+      this.applySession(data, remember)
+      this.syncUserProfile(data)
+      return data.role
+    },
+    async register({ account, phone, password, nickname, remember = true }) {
+      const data = await postJson('/api/auth/register', {
+        account: account.trim(),
+        phone: phone.trim(),
         password: password || '123456',
-        role: 'user',
-        phone,
-        nickname: nickname || normalized,
-        platformProfileId: profile.id,
-      }
+        nickname: nickname || account.trim(),
+      })
 
-      this.accounts.unshift(newAccount)
-      this.persistAccounts()
-
-      this.session = {
-        account: newAccount.account,
-        role: newAccount.role,
-        remember: true,
-      }
-      this.persistSession()
-      this.syncUserProfile(newAccount)
-
-      return newAccount
+      this.applySession(data, remember)
+      this.syncUserProfile(data)
+      return data
     },
-    resetPassword({ account, phone, code, nextPassword, expectedCode }) {
-      const normalized = account.trim()
-      const matched = this.accounts.find(
-        (item) => item.account === normalized && item.phone === phone.trim(),
-      )
-
-      if (!matched) {
-        throw new Error('账号和手机号不匹配')
-      }
-
+    async resetPassword({ account, phone, code, nextPassword, expectedCode }) {
       if (code !== expectedCode) {
-        throw new Error('验证码错误')
+        throw new Error('验证码错误，请输入页面展示的模拟验证码')
       }
 
-      if (!nextPassword || nextPassword.length < 6) {
-        throw new Error('新密码至少需要 6 位')
-      }
+      await postJson('/api/auth/reset-password', {
+        account: account.trim(),
+        phone: phone.trim(),
+        nextPassword,
+      })
 
-      matched.password = nextPassword
-      this.persistAccounts()
       return true
     },
+    async bootstrap() {
+      if (!this.session?.token) return
+
+      try {
+        const profile = await getJson('/api/auth/me')
+        this.applySession(profile, this.session.remember ?? true)
+        this.syncUserProfile(profile)
+      } catch {
+        this.logout()
+      }
+    },
     logout() {
+      const platformStore = usePlatformStore()
+      platformStore.resetClientState()
       this.session = null
       localStorage.removeItem(storageKey)
     },

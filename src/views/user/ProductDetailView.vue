@@ -17,9 +17,9 @@ const handleAddCart = () => {
   router.push('/cart')
 }
 
-const handleBuyNow = () => {
+const handleBuyNow = async () => {
   if (!product.value || !product.value.stock) return
-  store.buyNow(product.value, selectedSku.value, quantity.value)
+  await store.buyNow(product.value, selectedSku.value, quantity.value)
   router.push('/orders')
 }
 </script>

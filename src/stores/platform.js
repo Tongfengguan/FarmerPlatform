@@ -1,17 +1,6 @@
 import { defineStore } from 'pinia'
-import {
-  currentUser,
-  dashboardStats,
-  initialArticles,
-  initialOrders,
-  initialProducts,
-  initialUsers,
-} from '../data/mockData.js'
-
-const nextId = (items, fallback = 1) => {
-  if (!items.length) return fallback
-  return Math.max(...items.map((item) => Number(item.id))) + 1
-}
+import { currentUser, dashboardStats, initialArticles, initialOrders, initialProducts, initialUsers } from '../data/mockData.js'
+import { deleteJson, getJson, patchJson, postJson, putJson } from '../utils/http.js'
 
 const orderId = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`
 
@@ -24,8 +13,7 @@ export const usePlatformStore = defineStore('platform', {
     users: initialUsers,
     orders: initialOrders,
     cart: [],
-    latestArticleTip:
-      initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
+    latestArticleTip: initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
   }),
   getters: {
     publishedArticles(state) {
@@ -45,92 +33,64 @@ export const usePlatformStore = defineStore('platform', {
     },
   },
   actions: {
+    applyBootstrap(data) {
+      this.dashboard = data.dashboard ?? this.dashboard
+      this.articles = data.articles ?? this.articles
+      this.products = data.products ?? this.products
+      this.users = data.users ?? this.users
+      this.orders = data.orders ?? this.orders
+      this.latestArticleTip =
+        this.articles.find((article) => article.isPush && article.status === '已发布') ?? null
+    },
+    async bootstrapPublic() {
+      const data = await getJson('/api/platform/bootstrap')
+      this.applyBootstrap(data)
+    },
+    async bootstrapPrivate(role = 'user') {
+      this.currentUser.addressBook = await getJson('/api/platform/addresses')
+      this.orders = await getJson('/api/platform/orders')
+
+      if (role === 'admin') {
+        const adminData = await getJson('/api/admin/bootstrap')
+        this.applyBootstrap(adminData)
+      }
+    },
     setCurrentUser(profile) {
       this.currentUser = JSON.parse(JSON.stringify(profile))
-    },
-    registerUserAccount({ account, phone, nickname }) {
-      const userId = nextId(this.users, 1001)
-      const profile = {
-        id: userId,
-        name: account,
-        phone,
-        nickname: nickname || account,
-        avatar: account.slice(0, 1),
-        addressBook: [
-          {
-            id: 1,
-            name: account,
-            phone,
-            address: '请在个人中心补充收货地址',
-            isDefault: true,
-          },
-        ],
-      }
-
-      this.users.unshift({
-        id: userId,
-        name: account,
-        phone,
-        status: '正常',
-        createdAt: new Date().toISOString().slice(0, 10),
-        orders: 0,
-        spend: 0,
-        lastActive: new Date().toISOString().slice(0, 10),
-      })
-
-      this.setCurrentUser(profile)
-      return profile
     },
     dismissLatestTip() {
       this.latestArticleTip = null
     },
-    incrementArticleView(id) {
-      const article = this.articles.find((item) => item.id === Number(id))
-      if (article) article.viewCount += 1
+    async incrementArticleView(id) {
+      this.articles = await patchJson(`/api/platform/articles/${id}/view`)
     },
-    addArticle(payload) {
-      this.articles.unshift({
-        id: nextId(this.articles),
-        viewCount: 0,
-        publishedAt: new Date().toISOString().slice(0, 10),
-        ...payload,
-      })
+    async addArticle(payload) {
+      this.articles = await postJson('/api/admin/articles', payload)
+      this.latestArticleTip =
+        this.articles.find((article) => article.isPush && article.status === '已发布') ?? null
     },
-    updateArticle(payload) {
-      const index = this.articles.findIndex((item) => item.id === payload.id)
-      if (index !== -1) this.articles[index] = { ...this.articles[index], ...payload }
+    async updateArticle(payload) {
+      this.articles = await putJson(`/api/admin/articles/${payload.id}`, payload)
     },
-    removeArticle(id) {
-      this.articles = this.articles.filter((item) => item.id !== id)
+    async removeArticle(id) {
+      this.articles = await deleteJson(`/api/admin/articles/${id}`)
     },
-    toggleArticleStatus(id) {
-      const article = this.articles.find((item) => item.id === id)
-      if (!article) return
-      article.status = article.status === '已发布' ? '已下架' : '已发布'
+    async toggleArticleStatus(id) {
+      this.articles = await patchJson(`/api/admin/articles/${id}/toggle-status`)
     },
-    addProduct(payload) {
-      this.products.unshift({
-        id: nextId(this.products, 100),
-        salesCount: 0,
-        ...payload,
-      })
+    async addProduct(payload) {
+      this.products = await postJson('/api/admin/products', payload)
     },
-    updateProduct(payload) {
-      const index = this.products.findIndex((item) => item.id === payload.id)
-      if (index !== -1) this.products[index] = { ...this.products[index], ...payload }
+    async updateProduct(payload) {
+      this.products = await putJson(`/api/admin/products/${payload.id}`, payload)
     },
-    toggleProductStatus(id) {
-      const product = this.products.find((item) => item.id === id)
-      if (!product) return
-      product.status = product.status === '销售中' ? '已下架' : '销售中'
+    async toggleProductStatus(id) {
+      this.products = await patchJson(`/api/admin/products/${id}/toggle-status`)
     },
     addToCart(product, skuName, quantity) {
-      const existing = this.cart.find(
-        (item) => item.productId === product.id && item.sku === skuName,
-      )
-      if (existing) {
-        existing.quantity += quantity
-      } else {
+      const existing = this.cart.find((item) => item.productId === product.id && item.sku === skuName)
+      if (existing) existing.quantity += quantity
+      else {
         this.cart.push({
           productId: product.id,
           name: product.name,
@@ -143,31 +103,20 @@ export const usePlatformStore = defineStore('platform', {
       }
     },
     updateCartItem(productId, sku, quantity) {
-      const item = this.cart.find(
-        (entry) => entry.productId === productId && entry.sku === sku,
-      )
+      const item = this.cart.find((entry) => entry.productId === productId && entry.sku === sku)
       if (item) item.quantity = Math.max(1, quantity)
     },
     toggleCartSelection(productId, sku) {
-      const item = this.cart.find(
-        (entry) => entry.productId === productId && entry.sku === sku,
-      )
+      const item = this.cart.find((entry) => entry.productId === productId && entry.sku === sku)
       if (item) item.selected = !item.selected
     },
     removeCartItem(productId, sku) {
-      this.cart = this.cart.filter(
-        (item) => !(item.productId === productId && item.sku === sku),
-      )
+      this.cart = this.cart.filter((item) => !(item.productId === productId && item.sku === sku))
     },
-    checkoutSelected() {
+    async checkoutSelected() {
       const selectedItems = this.cart.filter((item) => item.selected)
       if (!selectedItems.length) return false
-      const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-      this.orders.unshift({
-        id: orderId(),
-        userId: this.currentUser.id,
-        buyer: this.currentUser.name,
-        phone: this.currentUser.phone,
+      this.orders = await postJson('/api/platform/orders', {
         items: selectedItems.map((item) => ({
           productId: item.productId,
           name: item.name,
@@ -175,61 +124,42 @@ export const usePlatformStore = defineStore('platform', {
           quantity: item.quantity,
           price: item.price,
         })),
-        payAmount: total,
-        freightAmount: total >= 99 ? 0 : 12,
-        status: '待付款',
-        createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
-        shipCompany: '',
-        shipNo: '',
-        receiver: this.currentUser.addressBook.find((address) => address.isDefault),
       })
       this.cart = this.cart.filter((item) => !item.selected)
       return true
     },
-    buyNow(product, skuName, quantity) {
+    async buyNow(product, skuName, quantity) {
       const price = product.skus.find((sku) => sku.name === skuName)?.price ?? product.price
-      this.orders.unshift({
-        id: orderId(),
-        userId: this.currentUser.id,
-        buyer: this.currentUser.name,
-        phone: this.currentUser.phone,
+      this.orders = await postJson('/api/platform/orders', {
         items: [{ productId: product.id, name: product.name, sku: skuName, quantity, price }],
-        payAmount: price * quantity,
-        freightAmount: price * quantity >= 99 ? 0 : 12,
-        status: '待付款',
-        createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
-        shipCompany: '',
-        shipNo: '',
-        receiver: this.currentUser.addressBook.find((address) => address.isDefault),
       })
     },
-    payOrder(id) {
-      const order = this.orders.find((item) => item.id === id)
-      if (order && order.status === '待付款') order.status = '待发货'
+    async payOrder(id) {
+      this.orders = await patchJson(`/api/platform/orders/${id}/pay`)
     },
-    cancelOrder(id) {
-      const order = this.orders.find((item) => item.id === id)
-      if (order && order.status === '待付款') order.status = '已取消'
+    async cancelOrder(id) {
+      this.orders = await patchJson(`/api/platform/orders/${id}/cancel`)
     },
-    confirmOrder(id) {
-      const order = this.orders.find((item) => item.id === id)
-      if (order && order.status === '待收货') order.status = '已完成'
+    async confirmOrder(id) {
+      this.orders = await patchJson(`/api/platform/orders/${id}/confirm`)
     },
-    shipOrder(id, shipCompany, shipNo) {
-      const order = this.orders.find((item) => item.id === id)
-      if (!order) return
-      order.shipCompany = shipCompany
-      order.shipNo = shipNo
-      order.status = '待收货'
+    async shipOrder(id, shipCompany, shipNo) {
+      this.orders = await patchJson(`/api/admin/orders/${id}/ship`, { shipCompany, shipNo })
     },
-    refundOrder(id) {
-      const order = this.orders.find((item) => item.id === id)
-      if (order) order.status = '已取消'
+    async refundOrder(id) {
+      this.orders = await patchJson(`/api/admin/orders/${id}/refund`)
     },
-    toggleUserStatus(id) {
-      const user = this.users.find((item) => item.id === id)
-      if (!user) return
-      user.status = user.status === '正常' ? '禁用' : '正常'
+    async toggleUserStatus(id) {
+      this.users = await patchJson(`/api/admin/users/${id}/toggle-status`)
+    },
+    async addAddress(address) {
+      this.currentUser.addressBook = await postJson('/api/platform/addresses', address)
+    },
+    resetClientState() {
+      this.cart = []
+      this.currentUser = JSON.parse(JSON.stringify(currentUser))
+      this.orders = []
+      this.users = []
     },
   },
 })
