@@ -2,8 +2,6 @@ import { defineStore } from 'pinia'
 import { currentUser, dashboardStats, initialArticles, initialOrders, initialProducts, initialUsers } from '../data/mockData.js'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../utils/http.js'
 
-const orderId = () => `${Date.now()}${Math.floor(Math.random() * 1000)}`
-
 export const usePlatformStore = defineStore('platform', {
   state: () => ({
     dashboard: dashboardStats,

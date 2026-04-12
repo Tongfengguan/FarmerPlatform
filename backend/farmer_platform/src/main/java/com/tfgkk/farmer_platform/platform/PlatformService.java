@@ -99,6 +99,30 @@ public class PlatformService {
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("Please add a default address first"));
 
+        for (OrderItemDto item : request.getItems()) {
+            ProductEntity product = productRepository.findById(item.productId())
+                    .orElseThrow(() -> new BusinessException("Product not found: " + item.name()));
+            
+            if (product.getStock() < item.quantity()) {
+                throw new BusinessException("Insufficient stock for product: " + product.getName());
+            }
+            product.setStock(product.getStock() - item.quantity());
+            
+            if (item.sku() != null && !item.sku().isEmpty() && !product.getSkus().isEmpty()) {
+                ProductSku targetSku = product.getSkus().stream()
+                        .filter(s -> s.getName().equals(item.sku()))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessException("SKU not found: " + item.sku()));
+                
+                if (targetSku.getStock() < item.quantity()) {
+                    throw new BusinessException("Insufficient stock for SKU: " + item.sku());
+                }
+                targetSku.setStock(targetSku.getStock() - item.quantity());
+            }
+            
+            productRepository.save(product);
+        }
+
         int payAmount = request.getItems().stream().mapToInt(item -> item.price() * item.quantity()).sum();
         int freightAmount = payAmount >= 99 ? 0 : 12;
         OrderEntity order = new OrderEntity();

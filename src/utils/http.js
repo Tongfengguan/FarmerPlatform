@@ -25,7 +25,7 @@ const getSessionToken = () => {
 const requestJson = async (url, options = {}) => {
   const token = getSessionToken()
   const headers = {
-    ...(options.headers || {}),
+    ...options.headers,
   }
 
   if (token) {
