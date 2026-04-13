@@ -82,6 +82,11 @@ const router = createRouter({
           name: 'admin-users',
           component: () => import('../views/admin/UserAdminView.vue'),
         },
+        {
+          path: 'ai-assistant',
+          name: 'admin-ai-assistant',
+          component: () => import('../views/admin/AiAssistantView.vue'),
+        },
       ],
     },
   ],

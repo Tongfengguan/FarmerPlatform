@@ -37,3 +37,8 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# AI Agent
+ai-agent/.env
+ai-agent/node_modules
+ai-agent/dist

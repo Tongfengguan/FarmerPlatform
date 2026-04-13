@@ -8,6 +8,7 @@ import {
   Box,
   Tickets,
   User as UserIcon,
+  ChatLineRound,
   Fold,
   Expand,
   ArrowDown,
@@ -22,6 +23,7 @@ const isCollapse = ref(false)
 
 const adminNav = [
   { label: '数据概览', to: '/admin/dashboard', icon: PieChart, group: '运营管理' },
+  { label: 'AI 智能助理', to: '/admin/ai-assistant', icon: ChatLineRound, group: '运营管理' },
   { label: '资讯管理', to: '/admin/articles', icon: Document, group: '运营管理' },
   { label: '商品管理', to: '/admin/products', icon: Box, group: '运营管理' },
   { label: '订单管理', to: '/admin/orders', icon: Tickets, group: '运营管理' },
