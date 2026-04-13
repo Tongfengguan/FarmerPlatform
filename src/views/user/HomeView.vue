@@ -22,13 +22,15 @@ const banners = [
     title: '智慧农业，助力乡村振兴',
     desc: '集成政策资讯、农资商城与专家指导的一站式服务平台。',
     image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80',
-    link: '/mall'
+    link: '/mall',
+    btnText: '立即选购'
   },
   {
     title: '三农资讯，实时掌握',
     desc: '权威政策解读，行业动态追踪，助您科学决策。',
     image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1600&q=80',
-    link: '/articles'
+    link: '/articles',
+    btnText: '阅读资讯'
   }
 ]
 </script>
@@ -44,8 +46,9 @@ const banners = [
             <h1>{{ item.title }}</h1>
             <p>{{ item.desc }}</p>
             <div class="hero-actions">
-              <el-button type="primary" size="large" @click="$router.push(item.link)">立即前往</el-button>
-              <el-button size="large" plain @click="$router.push('/mall')">进入商城</el-button>
+              <el-button type="primary" size="large" @click="$router.push(item.link)">
+                {{ item.btnText }}
+              </el-button>
             </div>
           </div>
         </div>
