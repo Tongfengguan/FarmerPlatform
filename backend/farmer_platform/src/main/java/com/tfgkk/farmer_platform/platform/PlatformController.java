@@ -48,7 +48,7 @@ public class PlatformController {
     }
 
     @PostMapping("/api/platform/addresses")
-    public ApiResponse<List<AddressDto>> addAddress(HttpServletRequest request, @Valid @RequestBody CreateAddressRequest body) {
+    public ApiResponse<AddressDto> addAddress(HttpServletRequest request, @Valid @RequestBody CreateAddressRequest body) {
         return ApiResponse.success("Address saved", platformService.addAddress(currentUserId(request), body));
     }
 
@@ -75,27 +75,27 @@ public class PlatformController {
     }
 
     @PostMapping("/api/platform/orders")
-    public ApiResponse<List<OrderDto>> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderRequest body) {
+    public ApiResponse<OrderDto> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderRequest body) {
         return ApiResponse.success("Order created", platformService.createOrder(currentUserId(request), body));
     }
 
     @PatchMapping("/api/platform/orders/{orderId}/pay")
-    public ApiResponse<List<OrderDto>> payOrder(HttpServletRequest request, @PathVariable String orderId) {
+    public ApiResponse<OrderDto> payOrder(HttpServletRequest request, @PathVariable String orderId) {
         return ApiResponse.success("Order paid", platformService.payOrder(currentUserId(request), orderId));
     }
 
     @PatchMapping("/api/platform/orders/{orderId}/cancel")
-    public ApiResponse<List<OrderDto>> cancelOrder(HttpServletRequest request, @PathVariable String orderId) {
+    public ApiResponse<OrderDto> cancelOrder(HttpServletRequest request, @PathVariable String orderId) {
         return ApiResponse.success("Order cancelled", platformService.cancelOrder(currentUserId(request), orderId));
     }
 
     @PatchMapping("/api/platform/orders/{orderId}/confirm")
-    public ApiResponse<List<OrderDto>> confirmOrder(HttpServletRequest request, @PathVariable String orderId) {
+    public ApiResponse<OrderDto> confirmOrder(HttpServletRequest request, @PathVariable String orderId) {
         return ApiResponse.success("Order confirmed", platformService.confirmOrder(currentUserId(request), orderId));
     }
 
     @PatchMapping("/api/platform/articles/{articleId}/view")
-    public ApiResponse<List<ArticleDto>> viewArticle(@PathVariable Long articleId) {
+    public ApiResponse<ArticleDto> viewArticle(@PathVariable Long articleId) {
         return ApiResponse.success("Article viewed", platformService.incrementArticleView(articleId));
     }
 
@@ -106,43 +106,44 @@ public class PlatformController {
     }
 
     @PostMapping("/api/admin/articles")
-    public ApiResponse<List<ArticleDto>> createArticle(HttpServletRequest request, @RequestBody ArticleDto body) {
+    public ApiResponse<ArticleDto> createArticle(HttpServletRequest request, @RequestBody ArticleDto body) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Article saved", platformService.saveArticle(body));
     }
 
     @PutMapping("/api/admin/articles/{articleId}")
-    public ApiResponse<List<ArticleDto>> updateArticle(HttpServletRequest request, @PathVariable Long articleId, @RequestBody ArticleDto body) {
+    public ApiResponse<ArticleDto> updateArticle(HttpServletRequest request, @PathVariable Long articleId, @RequestBody ArticleDto body) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Article updated", platformService.saveArticle(new ArticleDto(articleId, body.title(), body.category(), body.cover(), body.summary(), body.content(), body.source(), body.isPush(), body.status(), body.viewCount(), body.publishedAt())));
     }
 
     @DeleteMapping("/api/admin/articles/{articleId}")
-    public ApiResponse<List<ArticleDto>> deleteArticle(HttpServletRequest request, @PathVariable Long articleId) {
+    public ApiResponse<Void> deleteArticle(HttpServletRequest request, @PathVariable Long articleId) {
         platformService.assertAdmin(currentUserId(request));
-        return ApiResponse.success("Article deleted", platformService.deleteArticle(articleId));
+        platformService.deleteArticle(articleId);
+        return ApiResponse.success("Article deleted", null);
     }
 
     @PatchMapping("/api/admin/articles/{articleId}/toggle-status")
-    public ApiResponse<List<ArticleDto>> toggleArticle(HttpServletRequest request, @PathVariable Long articleId) {
+    public ApiResponse<ArticleDto> toggleArticle(HttpServletRequest request, @PathVariable Long articleId) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Article status toggled", platformService.toggleArticleStatus(articleId));
     }
 
     @PostMapping("/api/admin/products")
-    public ApiResponse<List<ProductDto>> createProduct(HttpServletRequest request, @RequestBody ProductDto body) {
+    public ApiResponse<ProductDto> createProduct(HttpServletRequest request, @RequestBody ProductDto body) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Product saved", platformService.saveProduct(body));
     }
 
     @PutMapping("/api/admin/products/{productId}")
-    public ApiResponse<List<ProductDto>> updateProduct(HttpServletRequest request, @PathVariable Long productId, @RequestBody ProductDto body) {
+    public ApiResponse<ProductDto> updateProduct(HttpServletRequest request, @PathVariable Long productId, @RequestBody ProductDto body) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Product updated", platformService.saveProduct(new ProductDto(productId, body.name(), body.categoryL1(), body.categoryL2(), body.image(), body.detail(), body.freightType(), body.price(), body.oldPrice(), body.stock(), body.salesCount(), body.status(), body.skus())));
     }
 
     @PatchMapping("/api/admin/products/{productId}/toggle-status")
-    public ApiResponse<List<ProductDto>> toggleProduct(HttpServletRequest request, @PathVariable Long productId) {
+    public ApiResponse<ProductDto> toggleProduct(HttpServletRequest request, @PathVariable Long productId) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Product status toggled", platformService.toggleProductStatus(productId));
     }
@@ -154,7 +155,7 @@ public class PlatformController {
     }
 
     @PatchMapping("/api/admin/users/{userId}/toggle-status")
-    public ApiResponse<List<UserSummaryDto>> toggleUser(HttpServletRequest request, @PathVariable Long userId) {
+    public ApiResponse<UserSummaryDto> toggleUser(HttpServletRequest request, @PathVariable Long userId) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("User status toggled", platformService.toggleUserStatus(userId));
     }
@@ -169,13 +170,13 @@ public class PlatformController {
     }
 
     @PatchMapping("/api/admin/orders/{orderId}/ship")
-    public ApiResponse<List<OrderDto>> shipOrder(HttpServletRequest request, @PathVariable String orderId, @Valid @RequestBody ShipOrderRequest body) {
+    public ApiResponse<OrderDto> shipOrder(HttpServletRequest request, @PathVariable String orderId, @Valid @RequestBody ShipOrderRequest body) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Order shipped", platformService.shipOrder(orderId, body));
     }
 
     @PatchMapping("/api/admin/orders/{orderId}/refund")
-    public ApiResponse<List<OrderDto>> refundOrder(HttpServletRequest request, @PathVariable String orderId) {
+    public ApiResponse<OrderDto> refundOrder(HttpServletRequest request, @PathVariable String orderId) {
         platformService.assertAdmin(currentUserId(request));
         return ApiResponse.success("Order refunded", platformService.refundOrder(orderId));
     }

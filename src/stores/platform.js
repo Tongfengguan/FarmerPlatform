@@ -76,30 +76,43 @@ export const usePlatformStore = defineStore('platform', {
       this.latestArticleTip = null
     },
     async incrementArticleView(id) {
-      this.articles = await patchJson(`/api/platform/articles/${id}/view`)
+      const updated = await patchJson(`/api/platform/articles/${id}/view`)
+      const index = this.articles.findIndex((a) => a.id === id)
+      if (index !== -1) this.articles[index] = updated
     },
     async addArticle(payload) {
-      this.articles = await postJson('/api/admin/articles', payload)
+      const added = await postJson('/api/admin/articles', payload)
+      this.articles.unshift(added)
       this.latestArticleTip =
         this.articles.find((article) => article.isPush && article.status === '已发布') ?? null
     },
     async updateArticle(payload) {
-      this.articles = await putJson(`/api/admin/articles/${payload.id}`, payload)
+      const updated = await putJson(`/api/admin/articles/${payload.id}`, payload)
+      const index = this.articles.findIndex((a) => a.id === updated.id)
+      if (index !== -1) this.articles[index] = updated
     },
     async removeArticle(id) {
-      this.articles = await deleteJson(`/api/admin/articles/${id}`)
+      await deleteJson(`/api/admin/articles/${id}`)
+      this.articles = this.articles.filter((a) => a.id !== id)
     },
     async toggleArticleStatus(id) {
-      this.articles = await patchJson(`/api/admin/articles/${id}/toggle-status`)
+      const updated = await patchJson(`/api/admin/articles/${id}/toggle-status`)
+      const index = this.articles.findIndex((a) => a.id === id)
+      if (index !== -1) this.articles[index] = updated
     },
     async addProduct(payload) {
-      this.products = await postJson('/api/admin/products', payload)
+      const added = await postJson('/api/admin/products', payload)
+      this.products.unshift(added)
     },
     async updateProduct(payload) {
-      this.products = await putJson(`/api/admin/products/${payload.id}`, payload)
+      const updated = await putJson(`/api/admin/products/${payload.id}`, payload)
+      const index = this.products.findIndex((p) => p.id === updated.id)
+      if (index !== -1) this.products[index] = updated
     },
     async toggleProductStatus(id) {
-      this.products = await patchJson(`/api/admin/products/${id}/toggle-status`)
+      const updated = await patchJson(`/api/admin/products/${id}/toggle-status`)
+      const index = this.products.findIndex((p) => p.id === id)
+      if (index !== -1) this.products[index] = updated
     },
     addToCart(product, skuName, quantity) {
       const existing = this.cart.find((item) => item.productId === product.id && item.sku === skuName)
@@ -130,7 +143,7 @@ export const usePlatformStore = defineStore('platform', {
     async checkoutSelected() {
       const selectedItems = this.cart.filter((item) => item.selected)
       if (!selectedItems.length) return false
-      this.orders = await postJson('/api/platform/orders', {
+      const newOrder = await postJson('/api/platform/orders', {
         items: selectedItems.map((item) => ({
           productId: item.productId,
           name: item.name,
@@ -139,35 +152,50 @@ export const usePlatformStore = defineStore('platform', {
           price: item.price,
         })),
       })
+      this.orders.unshift(newOrder)
       this.cart = this.cart.filter((item) => !item.selected)
       return true
     },
     async buyNow(product, skuName, quantity) {
       const price = product.skus.find((sku) => sku.name === skuName)?.price ?? product.price
-      this.orders = await postJson('/api/platform/orders', {
+      const newOrder = await postJson('/api/platform/orders', {
         items: [{ productId: product.id, name: product.name, sku: skuName, quantity, price }],
       })
+      this.orders.unshift(newOrder)
     },
     async payOrder(id) {
-      this.orders = await patchJson(`/api/platform/orders/${id}/pay`)
+      const updated = await patchJson(`/api/platform/orders/${id}/pay`)
+      const index = this.orders.findIndex((o) => o.id === id)
+      if (index !== -1) this.orders[index] = updated
     },
     async cancelOrder(id) {
-      this.orders = await patchJson(`/api/platform/orders/${id}/cancel`)
+      const updated = await patchJson(`/api/platform/orders/${id}/cancel`)
+      const index = this.orders.findIndex((o) => o.id === id)
+      if (index !== -1) this.orders[index] = updated
     },
     async confirmOrder(id) {
-      this.orders = await patchJson(`/api/platform/orders/${id}/confirm`)
+      const updated = await patchJson(`/api/platform/orders/${id}/confirm`)
+      const index = this.orders.findIndex((o) => o.id === id)
+      if (index !== -1) this.orders[index] = updated
     },
     async shipOrder(id, shipCompany, shipNo) {
-      this.orders = await patchJson(`/api/admin/orders/${id}/ship`, { shipCompany, shipNo })
+      const updated = await patchJson(`/api/admin/orders/${id}/ship`, { shipCompany, shipNo })
+      const index = this.orders.findIndex((o) => o.id === id)
+      if (index !== -1) this.orders[index] = updated
     },
     async refundOrder(id) {
-      this.orders = await patchJson(`/api/admin/orders/${id}/refund`)
+      const updated = await patchJson(`/api/admin/orders/${id}/refund`)
+      const index = this.orders.findIndex((o) => o.id === id)
+      if (index !== -1) this.orders[index] = updated
     },
     async toggleUserStatus(id) {
-      this.users = await patchJson(`/api/admin/users/${id}/toggle-status`)
+      const updated = await patchJson(`/api/admin/users/${id}/toggle-status`)
+      const index = this.users.findIndex((u) => u.id === id)
+      if (index !== -1) this.users[index] = updated
     },
     async addAddress(address) {
-      const addresses = await postJson('/api/platform/addresses', address)
+      const added = await postJson('/api/platform/addresses', address)
+      const addresses = await getJson('/api/platform/addresses') // Refresh addresses for simplicity and default status handling
       this.syncCurrentUser(this.currentUser, addresses)
     },
     resetClientState() {

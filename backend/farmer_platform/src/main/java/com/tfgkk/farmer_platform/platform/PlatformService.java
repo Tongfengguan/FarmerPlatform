@@ -102,7 +102,7 @@ public class PlatformService {
     }
 
     @Transactional
-    public List<AddressDto> addAddress(Long userId, CreateAddressRequest request) {
+    public AddressDto addAddress(Long userId, CreateAddressRequest request) {
         UserAccount user = requireUser(userId);
         if (request.isDefault()) {
             addressRepository.findByUserOrderByIdAsc(user).forEach(address -> address.setIsDefault(false));
@@ -113,8 +113,7 @@ public class PlatformService {
         entity.setPhone(request.getPhone().trim());
         entity.setAddress(request.getAddress().trim());
         entity.setIsDefault(request.isDefault() || addressRepository.findByUserOrderByIdAsc(user).isEmpty());
-        addressRepository.save(entity);
-        return listAddresses(userId);
+        return toAddressDto(addressRepository.save(entity));
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +122,7 @@ public class PlatformService {
     }
 
     @Transactional
-    public List<OrderDto> createOrder(Long userId, CreateOrderRequest request) {
+    public OrderDto createOrder(Long userId, CreateOrderRequest request) {
         UserAccount user = requireUser(userId);
         AddressEntity receiver = addressRepository.findByUserOrderByIdAsc(user).stream()
                 .filter(AddressEntity::getIsDefault)
@@ -171,45 +170,44 @@ public class PlatformService {
         order.setReceiverName(receiver.getName());
         order.setReceiverPhone(receiver.getPhone());
         order.setReceiverAddress(receiver.getAddress());
-        orderRepository.save(order);
-        return listMyOrders(userId);
+        return toOrderDto(orderRepository.save(order));
     }
 
     @Transactional
-    public List<OrderDto> payOrder(Long userId, String orderId) {
+    public OrderDto payOrder(Long userId, String orderId) {
         OrderEntity order = requireOwnedOrder(userId, orderId);
         if ("待付款".equals(order.getStatus())) order.setStatus("待发货");
-        return listMyOrders(userId);
+        return toOrderDto(order);
     }
 
     @Transactional
-    public List<OrderDto> cancelOrder(Long userId, String orderId) {
+    public OrderDto cancelOrder(Long userId, String orderId) {
         OrderEntity order = requireOwnedOrder(userId, orderId);
         if ("待付款".equals(order.getStatus())) order.setStatus("已取消");
-        return listMyOrders(userId);
+        return toOrderDto(order);
     }
 
     @Transactional
-    public List<OrderDto> confirmOrder(Long userId, String orderId) {
+    public OrderDto confirmOrder(Long userId, String orderId) {
         OrderEntity order = requireOwnedOrder(userId, orderId);
         if ("待收货".equals(order.getStatus())) order.setStatus("已完成");
-        return listMyOrders(userId);
+        return toOrderDto(order);
     }
 
     @Transactional
-    public List<OrderDto> shipOrder(String orderId, ShipOrderRequest request) {
+    public OrderDto shipOrder(String orderId, ShipOrderRequest request) {
         OrderEntity order = requireOrder(orderId);
         order.setShipCompany(request.getShipCompany().trim());
         order.setShipNo(request.getShipNo().trim());
         order.setStatus("待收货");
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toOrderDto).toList();
+        return toOrderDto(order);
     }
 
     @Transactional
-    public List<OrderDto> refundOrder(String orderId) {
+    public OrderDto refundOrder(String orderId) {
         OrderEntity order = requireOrder(orderId);
         order.setStatus("已取消");
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toOrderDto).toList();
+        return toOrderDto(order);
     }
 
     @Transactional(readOnly = true)
@@ -227,14 +225,14 @@ public class PlatformService {
     }
 
     @Transactional
-    public List<UserSummaryDto> toggleUserStatus(Long userId) {
+    public UserSummaryDto toggleUserStatus(Long userId) {
         UserAccount user = requireUser(userId);
         user.setEnabled(!Boolean.TRUE.equals(user.getEnabled()));
-        return listUsers();
+        return listUsers().stream().filter(u -> u.id().equals(userId)).findFirst().orElse(null);
     }
 
     @Transactional
-    public List<ArticleDto> saveArticle(ArticleDto articleDto) {
+    public ArticleDto saveArticle(ArticleDto articleDto) {
         ArticleEntity entity = articleDto.id() == null ? new ArticleEntity() : requireArticle(articleDto.id());
         entity.setTitle(articleDto.title());
         entity.setCategory(articleDto.category());
@@ -246,32 +244,30 @@ public class PlatformService {
         entity.setStatus(articleDto.status());
         entity.setPublishedAt(articleDto.publishedAt() == null ? LocalDate.now() : LocalDate.parse(articleDto.publishedAt()));
         if (entity.getViewCount() == null) entity.setViewCount(0);
-        articleRepository.save(entity);
-        return articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList();
+        return toArticleDto(articleRepository.save(entity));
     }
 
     @Transactional
-    public List<ArticleDto> toggleArticleStatus(Long articleId) {
+    public ArticleDto toggleArticleStatus(Long articleId) {
         ArticleEntity article = requireArticle(articleId);
         article.setStatus("已发布".equals(article.getStatus()) ? "已下架" : "已发布");
-        return articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList();
+        return toArticleDto(article);
     }
 
     @Transactional
-    public List<ArticleDto> deleteArticle(Long articleId) {
+    public void deleteArticle(Long articleId) {
         articleRepository.delete(requireArticle(articleId));
-        return articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList();
     }
 
     @Transactional
-    public List<ArticleDto> incrementArticleView(Long articleId) {
+    public ArticleDto incrementArticleView(Long articleId) {
         ArticleEntity article = requireArticle(articleId);
         article.setViewCount(article.getViewCount() + 1);
-        return articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList();
+        return toArticleDto(article);
     }
 
     @Transactional
-    public List<ProductDto> saveProduct(ProductDto productDto) {
+    public ProductDto saveProduct(ProductDto productDto) {
         ProductEntity entity = productDto.id() == null ? new ProductEntity() : requireProduct(productDto.id());
         entity.setName(productDto.name());
         entity.setCategoryL1(productDto.categoryL1());
@@ -285,15 +281,14 @@ public class PlatformService {
         entity.setSalesCount(productDto.salesCount());
         entity.setStatus(productDto.status());
         entity.setSkus(productDto.skus().stream().map(this::toProductSku).collect(Collectors.toList()));
-        productRepository.save(entity);
-        return productRepository.findAll().stream().map(this::toProductDto).sorted(Comparator.comparing(ProductDto::id).reversed()).toList();
+        return toProductDto(productRepository.save(entity));
     }
 
     @Transactional
-    public List<ProductDto> toggleProductStatus(Long productId) {
+    public ProductDto toggleProductStatus(Long productId) {
         ProductEntity product = requireProduct(productId);
         product.setStatus("销售中".equals(product.getStatus()) ? "已下架" : "销售中");
-        return productRepository.findAll().stream().map(this::toProductDto).sorted(Comparator.comparing(ProductDto::id).reversed()).toList();
+        return toProductDto(product);
     }
 
     public void assertAdmin(Long userId) {
