@@ -36,7 +36,7 @@ const banners = [
 <template>
   <div class="home-container">
     <!-- 轮播图 Banner -->
-    <el-carousel height="460px" class="hero-carousel" motion-blur>
+    <el-carousel height="460px" class="hero-carousel">
       <el-carousel-item v-for="(item, index) in banners" :key="index">
         <div class="carousel-content" :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url(${item.image})` }">
           <div class="hero-text">
@@ -163,9 +163,27 @@ const banners = [
   display: flex;
   align-items: center;
   padding: 0 60px;
-  /* 防止切换或悬浮交互时的抖动 */
+  /* 防止切换或悬浮交互时的抖动 - 强化版 */
+  backface-visibility: hidden;
+  perspective: 1000px;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* 针对 Element Plus 内部容器的稳定性增强 */
+:deep(.el-carousel__item) {
+  overflow: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+:deep(.el-carousel__mask) {
+  display: none; /* 移除可能的半透明遮罩干扰 */
+}
+
+/* 确保箭头按钮不会触发容器重新排版 */
+:deep(.el-carousel__arrow) {
+  transition: opacity 0.3s, background-color 0.3s;
 }
 
 .hero-text {
