@@ -1,13 +1,18 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { articleCategories } from '../../data/mockData'
 import { usePlatformStore } from '../../stores/platform'
+import { Plus, Edit, Delete, View, Search } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const store = usePlatformStore()
 const filter = ref('全部')
 const keyword = ref('')
 const showModal = ref(false)
 const editingId = ref(null)
+const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
 
 const form = reactive({
   title: '',
@@ -17,10 +22,10 @@ const form = reactive({
   content: '',
   status: '已发布',
   isPush: false,
-  cover:
-    'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
+  cover: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
 })
 
+// 过滤后的数据（前端搜索作为辅助，实际项目应结合后端搜索）
 const rows = computed(() =>
   store.articles.filter((article) => {
     const categoryMatch = filter.value === '全部' || article.category === filter.value
@@ -28,6 +33,20 @@ const rows = computed(() =>
     return categoryMatch && keywordMatch
   }),
 )
+
+const fetchPage = async () => {
+  loading.value = true
+  try {
+    await store.fetchArticles(currentPage.value - 1, pageSize.value)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePageChange = (val) => {
+  currentPage.value = val
+  fetchPage()
+}
 
 const openCreate = () => {
   editingId.value = null
@@ -39,179 +58,237 @@ const openCreate = () => {
     content: '',
     status: '已发布',
     isPush: false,
-    cover:
-      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
+    cover: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
   })
   showModal.value = true
 }
 
 const openEdit = (article) => {
   editingId.value = article.id
-  Object.assign(form, article)
+  Object.assign(form, JSON.parse(JSON.stringify(article)))
   showModal.value = true
 }
 
-const submit = () => {
+const submit = async () => {
   const payload = { ...form, id: editingId.value }
-  if (editingId.value) store.updateArticle(payload)
-  else store.addArticle(payload)
-  showModal.value = false
+  try {
+    if (editingId.value) {
+      await store.updateArticle(payload)
+      ElMessage.success('更新成功')
+    } else {
+      await store.addArticle(payload)
+      ElMessage.success('发布成功')
+    }
+    showModal.value = false
+  } catch (e) {
+    ElMessage.error(e.message || '操作失败')
+  }
 }
 
-const badgeClass = (value) => {
-  if (value === '已发布') return 'badge-success'
-  if (value === '已下架') return 'badge-danger'
-  return 'badge-muted'
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确定要删除该资讯吗？此操作不可撤销。', '删除确认', {
+    confirmButtonText: '确定删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+    buttonSize: 'default'
+  }).then(async () => {
+    await store.removeArticle(id)
+    ElMessage.success('删除成功')
+  })
 }
+
+const toggleStatus = async (id) => {
+  await store.toggleArticleStatus(id)
+  ElMessage.success('状态已更新')
+}
+
+onMounted(() => {
+  fetchPage()
+})
 </script>
 
 <template>
-  <section>
-    <div class="admin-page-head">
-      <h1>资讯管理</h1>
-      <p class="muted">支持发布、编辑、下架和删除资讯，并模拟推送通知开关。</p>
+  <div class="admin-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">资讯管理</h1>
+        <p class="page-subtitle">发布、编辑和维护平台资讯文章，支持模拟推送通知。</p>
+      </div>
+      <el-button type="primary" :icon="Plus" size="large" @click="openCreate">新建资讯</el-button>
     </div>
 
-    <div class="card panel">
+    <el-card shadow="never" class="table-card">
+      <!-- 工具栏 -->
       <div class="toolbar">
-        <input v-model="keyword" class="field" placeholder="搜索资讯标题" />
-        <button class="btn btn-primary" @click="openCreate">新建资讯</button>
+        <div class="filter-group">
+          <el-radio-group v-model="filter" @change="currentPage = 1; fetchPage()">
+            <el-radio-button v-for="item in articleCategories" :key="item" :label="item" :value="item" />
+          </el-radio-group>
+        </div>
+        <div class="search-group">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索资讯标题..."
+            :prefix-icon="Search"
+            clearable
+            style="width: 280px"
+          />
+        </div>
       </div>
 
-      <div class="chips">
-        <button
-          v-for="item in articleCategories"
-          :key="item"
-          class="chip"
-          :class="{ active: item === filter }"
-          @click="filter = item"
-        >
-          {{ item }}
-        </button>
-      </div>
+      <!-- 数据表格 -->
+      <el-table :data="rows" v-loading="loading" style="width: 100%; margin-top: 10px">
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="title" label="标题" min-width="250" show-overflow-tooltip />
+        <el-table-column prop="category" label="分类" width="120">
+          <template #default="{ row }">
+            <el-tag effect="plain">{{ row.category }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="publishedAt" label="发布时间" width="150" />
+        <el-table-column prop="viewCount" label="阅读量" width="100" align="center">
+          <template #default="{ row }">
+            <span class="view-count"><el-icon><View /></el-icon> {{ row.viewCount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === '已发布' ? 'success' : 'danger'">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
+          <template #default="{ row }">
+            <el-button-group>
+              <el-button :icon="Edit" @click="openEdit(row)">编辑</el-button>
+              <el-button 
+                :type="row.status === '已发布' ? 'warning' : 'success'" 
+                @click="toggleStatus(row.id)"
+              >
+                {{ row.status === '已发布' ? '下架' : '发布' }}
+              </el-button>
+              <el-button type="danger" :icon="Delete" @click="handleDelete(row.id)" />
+            </el-button-group>
+          </template>
+        </el-table-column>
+      </el-table>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>标题</th>
-              <th>分类</th>
-              <th>发布时间</th>
-              <th>阅读量</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in rows" :key="row.id">
-              <td>{{ row.id }}</td>
-              <td>{{ row.title }}</td>
-              <td>{{ row.category }}</td>
-              <td>{{ row.publishedAt }}</td>
-              <td>{{ row.viewCount }}</td>
-              <td><span class="badge" :class="badgeClass(row.status)">{{ row.status }}</span></td>
-              <td>
-                <div class="actions">
-                  <button class="btn" @click="openEdit(row)">编辑</button>
-                  <button class="btn" @click="store.toggleArticleStatus(row.id)">
-                    {{ row.status === '已发布' ? '下架' : '发布' }}
-                  </button>
-                  <button class="btn btn-danger" @click="store.removeArticle(row.id)">删除</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="store.articleTotal"
+          @size-change="fetchPage"
+          @current-change="handlePageChange"
+        />
       </div>
-    </div>
+    </el-card>
 
-    <div v-if="showModal" class="modal-mask" @click.self="showModal = false">
-      <div class="modal-panel card">
-        <h2>{{ editingId ? '编辑资讯' : '新建资讯' }}</h2>
-        <div class="modal-grid">
-          <div>
-            <div class="muted">资讯标题</div>
-            <input v-model="form.title" class="field" />
-          </div>
-          <div>
-            <div class="muted">分类</div>
-            <select v-model="form.category" class="select">
-              <option v-for="item in articleCategories.slice(1)" :key="item" :value="item">
-                {{ item }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-top: 16px">
-          <div class="muted">摘要</div>
-          <textarea v-model="form.summary" class="textarea"></textarea>
-        </div>
-        <div style="margin-top: 16px">
-          <div class="muted">正文内容</div>
-          <textarea v-model="form.content" class="textarea"></textarea>
-        </div>
-        <div class="modal-grid" style="margin-top: 16px">
-          <div>
-            <div class="muted">来源机构</div>
-            <input v-model="form.source" class="field" />
-          </div>
-          <div>
-            <div class="muted">状态</div>
-            <select v-model="form.status" class="select">
-              <option>草稿</option>
-              <option>已发布</option>
-              <option>已下架</option>
-            </select>
-          </div>
-        </div>
-        <label style="display: inline-flex; gap: 8px; margin-top: 16px; align-items: center">
-          <input v-model="form.isPush" type="checkbox" />
-          <span>发布时推送通知</span>
-        </label>
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px">
-          <button class="btn" @click="showModal = false">取消</button>
-          <button class="btn btn-primary" @click="submit">保存</button>
-        </div>
-      </div>
-    </div>
-  </section>
+    <!-- 编辑/创建弹窗 -->
+    <el-dialog
+      v-model="showModal"
+      :title="editingId ? '编辑资讯' : '新建资讯'"
+      width="700px"
+      destroy-on-close
+    >
+      <el-form :model="form" label-width="80px" label-position="top">
+        <el-row :gutter="20">
+          <el-col :span="16">
+            <el-form-item label="资讯标题">
+              <el-input v-model="form.title" placeholder="输入引人注目的标题" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="分类">
+              <el-select v-model="form.category" style="width: 100%">
+                <option v-for="item in articleCategories.slice(1)" :key="item" :label="item" :value="item" />
+                <el-option v-for="item in articleCategories.slice(1)" :key="item" :label="item" :value="item" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-form-item label="封面图 URL">
+          <el-input v-model="form.cover" placeholder="https://..." />
+        </el-form-item>
+
+        <el-form-item label="摘要">
+          <el-input v-model="form.summary" type="textarea" :rows="3" placeholder="简短的资讯介绍" />
+        </el-form-item>
+
+        <el-form-item label="正文内容">
+          <el-input v-model="form.content" type="textarea" :rows="8" placeholder="支持文本或简单的 HTML 内容" />
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="来源机构">
+              <el-input v-model="form.source" placeholder="例如：农业部、新华社" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="发布状态">
+              <el-select v-model="form.status" style="width: 100%">
+                <el-option label="草稿" value="草稿" />
+                <el-option label="已发布" value="已发布" />
+                <el-option label="已下架" value="已下架" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item>
+          <el-checkbox v-model="form.isPush" label="发布时向用户端推送通知" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showModal = false">取消</el-button>
+          <el-button type="primary" @click="submit">确认保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <style scoped>
-.admin-page-head h1 {
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
   margin: 0 0 8px;
-  font-size: 34px;
 }
 
-.panel {
-  margin-top: 18px;
-  padding: 22px;
+.page-subtitle {
+  color: var(--el-text-color-secondary);
+  margin: 0;
 }
 
-.chips {
+.toolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.chip {
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text-soft);
-  cursor: pointer;
+.view-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-text-color-secondary);
 }
 
-.chip.active {
-  background: rgba(35, 176, 125, 0.18);
-  color: #9cf4cf;
-}
-
-.actions {
+.pagination-wrapper {
+  margin-top: 24px;
   display: flex;
-  gap: 8px;
+  justify-content: flex-end;
 }
 </style>

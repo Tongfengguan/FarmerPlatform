@@ -7,9 +7,12 @@ export const usePlatformStore = defineStore('platform', {
     dashboard: dashboardStats,
     currentUser: JSON.parse(JSON.stringify(currentUser)),
     articles: initialArticles,
+    articleTotal: initialArticles.length,
     products: initialProducts,
+    productTotal: initialProducts.length,
     users: initialUsers,
     orders: initialOrders,
+    orderTotal: initialOrders.length,
     cart: [],
     latestArticleTip: initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
   }),
@@ -44,12 +47,49 @@ export const usePlatformStore = defineStore('platform', {
     },
     applyBootstrap(data) {
       this.dashboard = data.dashboard ?? this.dashboard
-      this.articles = data.articles?.content ?? data.articles ?? this.articles
-      this.products = data.products?.content ?? data.products ?? this.products
+      if (data.articles?.content) {
+        this.articles = data.articles.content
+        this.articleTotal = data.articles.totalElements
+      } else if (data.articles) {
+        this.articles = data.articles
+        this.articleTotal = data.articles.length
+      }
+
+      if (data.products?.content) {
+        this.products = data.products.content
+        this.productTotal = data.products.totalElements
+      } else if (data.products) {
+        this.products = data.products
+        this.productTotal = data.products.length
+      }
+
       this.users = data.users ?? this.users
-      this.orders = data.orders?.content ?? data.orders ?? this.orders
+
+      if (data.orders?.content) {
+        this.orders = data.orders.content
+        this.orderTotal = data.orders.totalElements
+      } else if (data.orders) {
+        this.orders = data.orders
+        this.orderTotal = data.orders.length
+      }
+
       this.latestArticleTip =
         this.articles.find((article) => article.isPush && article.status === '已发布') ?? null
+    },
+    async fetchArticles(page = 0, size = 10) {
+      const data = await getJson(`/api/platform/articles?page=${page}&size=${size}`)
+      this.articles = data.content
+      this.articleTotal = data.totalElements
+    },
+    async fetchProducts(page = 0, size = 20) {
+      const data = await getJson(`/api/platform/products?page=${page}&size=${size}`)
+      this.products = data.content
+      this.productTotal = data.totalElements
+    },
+    async fetchAdminOrders(page = 0, size = 10) {
+      const data = await getJson(`/api/admin/orders?page=${page}&size=${size}`)
+      this.orders = data.content
+      this.orderTotal = data.totalElements
     },
     async bootstrapPublic() {
       const data = await getJson('/api/platform/bootstrap')
@@ -63,7 +103,13 @@ export const usePlatformStore = defineStore('platform', {
         this.currentUser.addressBook = addresses
       }
       const orderData = await getJson('/api/platform/orders')
-      this.orders = orderData?.content ?? orderData ?? []
+      if (orderData?.content) {
+        this.orders = orderData.content
+        this.orderTotal = orderData.totalElements
+      } else {
+        this.orders = orderData ?? []
+        this.orderTotal = this.orders.length
+      }
 
       if (role === 'admin') {
         const adminData = await getJson('/api/admin/bootstrap')
