@@ -12,6 +12,9 @@ import { usePlatformStore } from './stores/platform'
 const app = createApp(App)
 const pinia = createPinia()
 
+// 激活 Element Plus 暗黑模式
+document.documentElement.classList.add('dark')
+
 app.use(pinia)
 
 const authStore = useAuthStore(pinia)

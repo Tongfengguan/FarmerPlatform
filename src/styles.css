@@ -247,9 +247,13 @@ button {
 }
 
 /* Element Plus 全局样式定制 */
-:root {
-  --el-card-bg-color: #161d1b !important; /* 稍微比主背景浅一点的深绿色 */
+html.dark {
+  --el-bg-color: #0f1615 !important;
+  --el-bg-color-overlay: #161d1b !important;
+  --el-card-bg-color: #161d1b !important;
   --el-card-border-color: rgba(255, 255, 255, 0.05) !important;
+  --el-border-color-light: rgba(255, 255, 255, 0.05) !important;
+  --el-border-color-lighter: rgba(255, 255, 255, 0.03) !important;
 }
 
 .el-card {
