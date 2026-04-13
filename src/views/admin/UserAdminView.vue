@@ -1,162 +1,252 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { usePlatformStore } from '../../stores/platform'
+import { 
+  User, 
+  CircleCheck, 
+  CircleClose, 
+  View, 
+  Search,
+  Timer
+} from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const store = usePlatformStore()
-const status = ref('全部')
+const statusFilter = ref('全部')
 const keyword = ref('')
 const detailUser = ref(null)
+const showDetail = ref(false)
 
 const rows = computed(() =>
   store.users.filter((user) => {
-    const statusMatch = status.value === '全部' || user.status === status.value
+    const statusMatch = statusFilter.value === '全部' || user.status === statusFilter.value
     const keywordMatch =
       !keyword.value || user.name.includes(keyword.value) || user.phone.includes(keyword.value)
     return statusMatch && keywordMatch
   }),
 )
+
+const activeUsersCount = computed(() => store.users.filter(u => u.status === '正常').length)
+const disabledUsersCount = computed(() => store.users.filter(u => u.status === '禁用').length)
+
+const openDetail = (user) => {
+  detailUser.ref = user // Note: current store uses .name, .orders, .spend based on previous read
+  detailUser.value = user
+  showDetail.value = true
+}
+
+const handleToggleStatus = (user) => {
+  const action = user.status === '正常' ? '禁用' : '启用'
+  ElMessageBox.confirm(`确定要${action}用户 [${user.name}] 的账户吗？`, '状态变更确认', {
+    confirmButtonText: `确定${action}`,
+    cancelButtonText: '取消',
+    type: user.status === '正常' ? 'warning' : 'info'
+  }).then(async () => {
+    await store.toggleUserStatus(user.id)
+    ElMessage.success(`用户已${action}`)
+  })
+}
 </script>
 
 <template>
-  <section>
-    <div class="admin-page-head">
-      <h1>用户管理</h1>
-      <p class="muted">展示用户基础档案、累计消费与账户状态，支持启用和禁用操作。</p>
+  <div class="admin-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">用户管理</h1>
+        <p class="page-subtitle">管理平台注册用户，监控活跃度及消费情况，维护账户安全。</p>
+      </div>
     </div>
 
-    <div class="stats">
-      <div class="card stat-card"><span class="muted">注册用户总数</span><strong>{{ store.users.length }}</strong></div>
-      <div class="card stat-card"><span class="muted">正常账户</span><strong>{{ store.users.filter((user) => user.status === '正常').length }}</strong></div>
-      <div class="card stat-card"><span class="muted">禁用账户</span><strong>{{ store.users.filter((user) => user.status === '禁用').length }}</strong></div>
-      <div class="card stat-card"><span class="muted">今日活跃</span><strong>342</strong></div>
-    </div>
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="stat-row">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <el-statistic :value="store.users.length" title="注册用户总数">
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <el-statistic :value="activeUsersCount" title="正常账户" value-style="color: var(--el-color-success)">
+            <template #prefix>
+              <el-icon><CircleCheck /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <el-statistic :value="disabledUsersCount" title="禁用账户" value-style="color: var(--el-color-danger)">
+            <template #prefix>
+              <el-icon><CircleClose /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <el-statistic :value="342" title="今日活跃">
+            <template #prefix>
+              <el-icon><Timer /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <div class="card panel">
+    <el-card shadow="never" class="table-card">
+      <!-- 工具栏 -->
       <div class="toolbar">
-        <input v-model="keyword" class="field" placeholder="搜索用户昵称或手机号" />
-      </div>
-
-      <div class="chips">
-        <button class="chip" :class="{ active: status === '全部' }" @click="status = '全部'">全部用户</button>
-        <button class="chip" :class="{ active: status === '正常' }" @click="status = '正常'">正常</button>
-        <button class="chip" :class="{ active: status === '禁用' }" @click="status = '禁用'">禁用</button>
-      </div>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>用户</th>
-              <th>手机号</th>
-              <th>注册时间</th>
-              <th>订单数</th>
-              <th>消费总额</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in rows" :key="row.id">
-              <td>{{ row.name }}</td>
-              <td>{{ row.phone }}</td>
-              <td>{{ row.createdAt }}</td>
-              <td>{{ row.orders }}</td>
-              <td>¥{{ row.spend }}</td>
-              <td><span class="badge" :class="row.status === '正常' ? 'badge-success' : 'badge-danger'">{{ row.status }}</span></td>
-              <td>
-                <div class="actions">
-                  <button class="btn" @click="detailUser = row">详情</button>
-                  <button
-                    class="btn"
-                    :class="row.status === '正常' ? 'btn-danger' : 'btn-primary'"
-                    @click="store.toggleUserStatus(row.id)"
-                  >
-                    {{ row.status === '正常' ? '禁用' : '启用' }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div v-if="detailUser" class="modal-mask" @click.self="detailUser = null">
-      <div class="modal-panel card">
-        <h2>用户详情</h2>
-        <div class="detail-row"><span class="muted">用户 ID</span><strong>{{ detailUser.id }}</strong></div>
-        <div class="detail-row"><span class="muted">姓名</span><strong>{{ detailUser.name }}</strong></div>
-        <div class="detail-row"><span class="muted">手机号</span><strong>{{ detailUser.phone }}</strong></div>
-        <div class="detail-row"><span class="muted">注册时间</span><strong>{{ detailUser.createdAt }}</strong></div>
-        <div class="detail-row"><span class="muted">累计订单</span><strong>{{ detailUser.orders }}</strong></div>
-        <div class="detail-row"><span class="muted">累计消费</span><strong>¥{{ detailUser.spend }}</strong></div>
-        <div class="detail-row"><span class="muted">最近活跃</span><strong>{{ detailUser.lastActive }}</strong></div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 24px">
-          <button class="btn" @click="detailUser = null">关闭</button>
+        <div class="filter-group">
+          <el-radio-group v-model="statusFilter">
+            <el-radio-button label="全部" value="全部">全部用户</el-radio-button>
+            <el-radio-button label="正常" value="正常">正常</el-radio-button>
+            <el-radio-button label="禁用" value="禁用">禁用</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="search-group">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索昵称或手机号..."
+            :prefix-icon="Search"
+            clearable
+            style="width: 280px"
+          />
         </div>
       </div>
-    </div>
-  </section>
+
+      <!-- 用户列表 -->
+      <el-table :data="rows" style="width: 100%">
+        <el-table-column label="用户信息" min-width="200">
+          <template #default="{ row }">
+            <div class="user-info-cell">
+              <el-avatar :size="32" class="user-avatar">{{ row.name.slice(0, 1) }}</el-avatar>
+              <div class="user-detail">
+                <div class="user-name">{{ row.name }}</div>
+                <div class="user-id">ID: {{ row.id }}</div>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="手机号" width="140" />
+        <el-table-column prop="createdAt" label="注册时间" width="140" />
+        <el-table-column prop="orders" label="订单数" width="100" align="center" sortable />
+        <el-table-column label="消费总额" width="140" sortable>
+          <template #default="{ row }">
+            <span class="price-text">¥{{ row.spend.toLocaleString() }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === '正常' ? 'success' : 'danger'" effect="dark">
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button-group>
+              <el-button :icon="View" @click="openDetail(row)">详情</el-button>
+              <el-button 
+                :type="row.status === '正常' ? 'danger' : 'primary'"
+                @click="handleToggleStatus(row)"
+              >
+                {{ row.status === '正常' ? '禁用' : '启用' }}
+              </el-button>
+            </el-button-group>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 用户详情弹窗 -->
+    <el-dialog v-model="showDetail" title="用户档案详情" width="500px">
+      <div v-if="detailUser" class="user-profile-view">
+        <div class="profile-header">
+          <el-avatar :size="64" class="large-avatar">{{ detailUser.name.slice(0, 1) }}</el-avatar>
+          <h2>{{ detailUser.name }}</h2>
+          <el-tag :type="detailUser.status === '正常' ? 'success' : 'danger'">{{ detailUser.status }}</el-tag>
+        </div>
+
+        <el-descriptions :column="1" border class="profile-desc">
+          <el-descriptions-item label="手机号码">{{ detailUser.phone }}</el-descriptions-item>
+          <el-descriptions-item label="注册时间">{{ detailUser.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="累计订单">{{ detailUser.orders }} 单</el-descriptions-item>
+          <el-descriptions-item label="消费总额">¥{{ detailUser.spend.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="最近活跃">{{ detailUser.lastActive }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showDetail = false">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <style scoped>
-.admin-page-head h1 {
-  margin: 0 0 8px;
-  font-size: 34px;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 18px;
+.stat-row {
+  margin-bottom: 20px;
 }
 
 .stat-card {
-  padding: 18px 20px;
+  border: none;
 }
 
-.stat-card strong {
-  display: block;
-  margin-top: 12px;
-  font-size: 34px;
-}
-
-.panel {
-  margin-top: 18px;
-  padding: 22px;
-}
-
-.chips {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.chip {
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text-soft);
-  cursor: pointer;
-}
-
-.chip.active {
-  background: rgba(35, 176, 125, 0.18);
-  color: #9cf4cf;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.detail-row {
+.toolbar {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  background-color: var(--el-color-primary-light-3);
+  color: var(--el-color-white);
+  font-weight: bold;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.user-id {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.price-text {
+  font-weight: 700;
+  color: var(--el-color-success);
+}
+
+.user-profile-view {
+  text-align: center;
+}
+
+.profile-header {
+  margin-bottom: 24px;
+}
+
+.profile-header h2 {
+  margin: 16px 0 8px;
+}
+
+.large-avatar {
+  font-size: 28px;
+  background-color: var(--el-color-primary);
+}
+
+.profile-desc {
+  margin-top: 20px;
 }
 </style>
