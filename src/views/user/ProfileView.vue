@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive } from 'vue'
 import { usePlatformStore } from '../../stores/platform'
+import { User, Location, Phone, Goods, ShoppingCart, Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const store = usePlatformStore()
 const user = computed(() => store.currentUser)
@@ -14,157 +16,350 @@ const form = reactive({
 })
 
 const submitAddress = async () => {
-  if (!form.name || !form.phone || !form.address) return
-  await store.addAddress({ ...form })
-  form.name = ''
-  form.phone = ''
-  form.address = ''
-  form.isDefault = false
+  if (!form.name || !form.phone || !form.address) {
+    return ElMessage.warning('请填写完整的收货信息')
+  }
+  try {
+    await store.addAddress({ ...form })
+    ElMessage.success('地址添加成功')
+    form.name = ''
+    form.phone = ''
+    form.address = ''
+    form.isDefault = false
+  } catch (error) {
+    ElMessage.error(error.message || '添加失败')
+  }
 }
 </script>
 
 <template>
-  <section class="page-shell profile-layout">
-    <div class="card profile-card">
-      <div class="profile-head">
-        <div class="profile-avatar">{{ user.avatar }}</div>
-        <div>
-          <h1>{{ user.nickname }}</h1>
-          <div class="muted">{{ user.name }} · {{ user.phone }}</div>
-        </div>
-      </div>
-
-      <div class="profile-grid">
-        <div class="profile-stat">
-          <span class="muted">累计订单</span>
-          <strong>{{ store.currentUserOrders.length }}</strong>
-        </div>
-        <div class="profile-stat">
-          <span class="muted">购物车商品</span>
-          <strong>{{ store.cartCount }}</strong>
-        </div>
-        <div class="profile-stat">
-          <span class="muted">默认收货地址</span>
-          <strong>{{ defaultAddress ? `${defaultAddress.address.slice(0, 8)}...` : '待补充' }}</strong>
-        </div>
-      </div>
+  <div class="profile-container">
+    <div class="page-header">
+      <h1 class="page-title">个人中心</h1>
+      <p class="page-subtitle">管理您的个人资料、收货地址与消费记录。</p>
     </div>
 
-    <div class="card address-card">
-      <div class="section-title">
-        <h2>收货地址</h2>
-      </div>
-      <div class="address-form">
-        <input v-model="form.name" class="field" placeholder="收货人" />
-        <input v-model="form.phone" class="field" placeholder="手机号" />
-        <input v-model="form.address" class="field" placeholder="详细地址" />
-        <label class="muted form-check">
-          <input v-model="form.isDefault" type="checkbox" />
-          <span>设为默认地址</span>
-        </label>
-        <button class="btn btn-primary" @click="submitAddress">新增地址</button>
-      </div>
-      <div class="address-list">
-        <div v-for="address in addressBook" :key="address.id" class="address-item">
-          <div>
-            <strong>{{ address.name }} {{ address.phone }}</strong>
-            <div class="muted">{{ address.address }}</div>
+    <el-row :gutter="24" class="profile-layout">
+      <!-- 左侧：个人信息与统计 -->
+      <el-col :span="8">
+        <el-card shadow="never" class="user-card">
+          <div class="user-header">
+            <el-avatar :size="80" class="user-avatar">{{ user.avatar }}</el-avatar>
+            <h2 class="user-nickname">{{ user.nickname }}</h2>
+            <div class="user-meta">
+              <span class="meta-item"><el-icon><User /></el-icon>{{ user.name }}</span>
+              <span class="meta-item"><el-icon><Phone /></el-icon>{{ user.phone }}</span>
+            </div>
           </div>
-          <span class="badge" :class="address.isDefault ? 'badge-success' : 'badge-muted'">
-            {{ address.isDefault ? '默认地址' : '备用地址' }}
-          </span>
-        </div>
-      </div>
-    </div>
-  </section>
+
+          <el-divider border-style="dashed" />
+
+          <div class="user-stats">
+            <div class="stat-item">
+              <div class="stat-label">累计订单</div>
+              <div class="stat-value">{{ store.currentUserOrders.length }}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">购物车商品</div>
+              <div class="stat-value">{{ store.cartCount }}</div>
+            </div>
+          </div>
+
+          <el-divider border-style="dashed" />
+
+          <div class="default-address-preview">
+            <div class="preview-header">默认收货地址</div>
+            <div class="preview-content" v-if="defaultAddress">
+              <div class="preview-name">{{ defaultAddress.name }} {{ defaultAddress.phone }}</div>
+              <div class="preview-text">{{ defaultAddress.address }}</div>
+            </div>
+            <div class="preview-content empty-preview" v-else>
+              暂无默认地址，请在右侧添加
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 右侧：地址管理 -->
+      <el-col :span="16">
+        <el-card shadow="never" class="address-card">
+          <template #header>
+            <div class="card-header">
+              <span>收货地址管理</span>
+            </div>
+          </template>
+
+          <div class="address-form-box">
+            <h3 class="form-title">新增地址</h3>
+            <el-form :model="form" label-width="80px" label-position="top">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="收货人">
+                    <el-input v-model="form.name" placeholder="请输入收货人姓名" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="手机号码">
+                    <el-input v-model="form.phone" placeholder="请输入联系电话" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-form-item label="详细地址">
+                <el-input 
+                  v-model="form.address" 
+                  type="textarea" 
+                  :rows="2" 
+                  placeholder="请输入省、市、区及详细街道门牌信息" 
+                />
+              </el-form-item>
+              
+              <div class="form-actions">
+                <el-checkbox v-model="form.isDefault" label="设为默认地址" />
+                <el-button type="primary" :icon="Plus" @click="submitAddress">保存收货地址</el-button>
+              </div>
+            </el-form>
+          </div>
+
+          <el-divider border-style="dashed" />
+
+          <div class="address-list-box">
+            <h3 class="list-title">已有地址</h3>
+            <div class="address-list" v-if="addressBook.length">
+              <div v-for="address in addressBook" :key="address.id" class="address-item">
+                <div class="address-info">
+                  <div class="address-contact">
+                    <span class="contact-name">{{ address.name }}</span>
+                    <span class="contact-phone">{{ address.phone }}</span>
+                  </div>
+                  <div class="address-detail"><el-icon><Location /></el-icon> {{ address.address }}</div>
+                </div>
+                <div class="address-status">
+                  <el-tag :type="address.isDefault ? 'success' : 'info'" effect="dark" size="small">
+                    {{ address.isDefault ? '默认地址' : '备用地址' }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            <el-empty v-else description="您还没有添加过收货地址" :image-size="120" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
 </template>
 
 <style scoped>
+.profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.page-subtitle {
+  color: var(--el-text-color-secondary);
+  margin: 0;
+}
+
 .profile-layout {
-  display: grid;
-  gap: 20px;
+  align-items: flex-start;
 }
 
-.profile-card,
-.address-card {
-  padding: 24px;
+.user-card, .address-card {
+  border: none;
+  background: var(--el-bg-color-overlay);
 }
 
-.profile-head {
+.user-card {
+  position: sticky;
+  top: 24px;
+}
+
+.user-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
+  padding: 20px 0;
 }
 
-.profile-avatar {
+.user-avatar {
+  background-color: var(--el-color-primary-light-3);
+  color: var(--el-color-white);
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.user-nickname {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.user-meta {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 74px;
-  height: 74px;
-  border-radius: 22px;
-  background: rgba(35, 176, 125, 0.2);
-  font-size: 30px;
-  font-weight: 800;
-  color: #a6f1cf;
-}
-
-.profile-head h1 {
-  margin: 0 0 6px;
-}
-
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 22px;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
 }
 
-.profile-stat {
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.default-address-preview {
+  padding: 10px 20px 20px;
+}
+
+.preview-header {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--el-text-color-primary);
+}
+
+.preview-content {
+  background-color: var(--el-fill-color-darker);
   padding: 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
 }
 
-.profile-stat strong {
-  display: block;
-  margin-top: 12px;
-  font-size: 26px;
+.preview-name {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--el-text-color-primary);
 }
 
-.section-title {
+.preview-text {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+
+.empty-preview {
+  color: var(--el-text-color-placeholder);
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.card-header {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.form-title, .list-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 20px;
+  color: var(--el-text-color-primary);
+}
+
+.address-form-box {
+  padding: 10px 0;
+}
+
+.form-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  margin-top: 10px;
+}
+
+.address-list-box {
+  padding: 10px 0;
 }
 
 .address-list {
-  display: grid;
-  gap: 14px;
-}
-
-.address-form {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.form-check {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .address-item {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
   align-items: center;
-  padding: 18px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  background-color: var(--el-fill-color-blank);
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  transition: border-color 0.3s;
+}
+
+.address-item:hover {
+  border-color: var(--el-color-primary-light-5);
+}
+
+.address-info {
+  flex: 1;
+}
+
+.address-contact {
+  margin-bottom: 10px;
+}
+
+.contact-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-right: 12px;
+  color: var(--el-text-color-primary);
+}
+
+.contact-phone {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
+
+.address-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
+}
+
+.address-detail .el-icon {
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
+}
+
+.address-status {
+  margin-left: 24px;
 }
 </style>
