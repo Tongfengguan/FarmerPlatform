@@ -245,3 +245,35 @@ button {
   text-align: center;
   color: var(--text-mute);
 }
+
+/* Element Plus 全局样式定制 */
+:root {
+  --el-card-bg-color: #161d1b !important; /* 稍微比主背景浅一点的深绿色 */
+  --el-card-border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.el-card {
+  background-color: var(--el-card-bg-color) !important;
+  border: 1px solid var(--el-card-border-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* 强化卡片 Body 的深色效果 */
+.el-card__body {
+  background-color: transparent !important;
+}
+
+/* 让卡片头部的分割线更柔和 */
+.el-card__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 16px 20px !important;
+}
+
+/* 针对暗黑模式下的文字颜色微调 */
+.el-statistic__title {
+  color: var(--text-mute) !important;
+}
+
+.el-statistic__content {
+  color: var(--text) !important;
+}
