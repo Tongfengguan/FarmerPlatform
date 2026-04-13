@@ -2,205 +2,311 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePlatformStore } from '../../stores/platform'
+import { 
+  ArrowRight, 
+  TrendCharts, 
+  Goods, 
+  List,
+  Reading
+} from '@element-plus/icons-vue'
 
 const store = usePlatformStore()
 
 const latestArticles = computed(() => store.publishedArticles.slice(0, 3))
 const hotProducts = computed(() =>
-  [...store.activeProducts].sort((a, b) => b.salesCount - a.salesCount).slice(0, 3),
+  [...store.activeProducts].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4),
 )
+
+const banners = [
+  {
+    title: '智慧农业，助力乡村振兴',
+    desc: '集成政策资讯、农资商城与专家指导的一站式服务平台。',
+    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80',
+    link: '/mall'
+  },
+  {
+    title: '三农资讯，实时掌握',
+    desc: '权威政策解读，行业动态追踪，助您科学决策。',
+    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1600&q=80',
+    link: '/articles'
+  }
+]
 </script>
 
 <template>
-  <section class="page-shell">
-    <div class="hero card">
-      <div class="hero__content">
-        <div class="hero__eyebrow">乡村振兴数字服务平台</div>
-        <h1>把政策资讯、农资商城和订单服务放进一个入口。</h1>
-        <p class="muted">
-          这个基础版本优先覆盖 PRD 中最核心的三条主线：看资讯、买商品、查订单，并保留管理端运营入口。
-        </p>
-        <div class="hero__actions">
-          <RouterLink class="btn btn-primary" to="/articles">查看三农资讯</RouterLink>
-          <RouterLink class="btn btn-ghost" to="/mall">进入三农商城</RouterLink>
-        </div>
-      </div>
-      <div class="hero__stats">
-        <div class="hero-stat card">
-          <span class="muted">本月政策发布</span>
-          <strong>47</strong>
-        </div>
-        <div class="hero-stat card">
-          <span class="muted">热销商品</span>
-          <strong>18</strong>
-        </div>
-        <div class="hero-stat card">
-          <span class="muted">在线订单</span>
-          <strong>23</strong>
-        </div>
-      </div>
-    </div>
-
-    <section class="section">
-      <div class="section__head">
-        <h2>最新资讯</h2>
-        <RouterLink class="muted" to="/articles">查看更多</RouterLink>
-      </div>
-      <div class="article-grid">
-        <RouterLink
-          v-for="article in latestArticles"
-          :key="article.id"
-          :to="`/articles/${article.id}`"
-          class="article-card card"
-        >
-          <img :src="article.cover" :alt="article.title" />
-          <div class="article-card__body">
-            <span class="badge badge-success">{{ article.category }}</span>
-            <h3>{{ article.title }}</h3>
-            <p class="muted">{{ article.summary }}</p>
-            <div class="article-card__meta">
-              <span>{{ article.publishedAt }}</span>
-              <span>阅读 {{ article.viewCount }}</span>
+  <div class="home-container">
+    <!-- 轮播图 Banner -->
+    <el-carousel height="460px" class="hero-carousel" motion-blur>
+      <el-carousel-item v-for="(item, index) in banners" :key="index">
+        <div class="carousel-content" :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url(${item.image})` }">
+          <div class="hero-text">
+            <div class="hero-eyebrow">乡村振兴 · 数字服务</div>
+            <h1>{{ item.title }}</h1>
+            <p>{{ item.desc }}</p>
+            <div class="hero-actions">
+              <el-button type="primary" size="large" @click="$router.push(item.link)">立即前往</el-button>
+              <el-button size="large" plain @click="$router.push('/mall')">进入商城</el-button>
             </div>
           </div>
-        </RouterLink>
+        </div>
+      </el-carousel-item>
+    </el-carousel>
+
+    <!-- 快捷统计 -->
+    <el-row :gutter="20" class="stat-banner">
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic :value="47" title="本月政策发布">
+            <template #prefix><el-icon><List /></el-icon></template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic :value="18" title="今日上新商品">
+            <template #prefix><el-icon><Goods /></el-icon></template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic :value="23" title="待处理咨询">
+            <template #prefix><el-icon><TrendCharts /></el-icon></template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 最新资讯 -->
+    <section class="home-section">
+      <div class="section-head">
+        <div class="title-area">
+          <el-icon class="section-icon"><Reading /></el-icon>
+          <h2>最新三农资讯</h2>
+        </div>
+        <el-button link @click="$router.push('/articles')">查看更多 <el-icon><ArrowRight /></el-icon></el-button>
       </div>
+      
+      <el-row :gutter="20">
+        <el-col v-for="article in latestArticles" :key="article.id" :span="8">
+          <el-card :body-style="{ padding: '0px' }" shadow="hover" class="article-card" @click="$router.push(`/articles/${article.id}`)">
+            <div class="card-image-wrap">
+              <el-image :src="article.cover" fit="cover" class="card-image" />
+              <el-tag class="card-tag" type="success" effect="dark">{{ article.category }}</el-tag>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">{{ article.title }}</h3>
+              <p class="card-desc">{{ article.summary }}</p>
+              <div class="card-footer">
+                <span class="date">{{ article.publishedAt }}</span>
+                <span class="views">阅读 {{ article.viewCount }}</span>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
     </section>
 
-    <section class="section">
-      <div class="section__head">
-        <h2>热销商品</h2>
-        <RouterLink class="muted" to="/mall">进入商城</RouterLink>
+    <!-- 热销商品 -->
+    <section class="home-section">
+      <div class="section-head">
+        <div class="title-area">
+          <el-icon class="section-icon"><Goods /></el-icon>
+          <h2>严选热销农资</h2>
+        </div>
+        <el-button link @click="$router.push('/mall')">进入商城 <el-icon><ArrowRight /></el-icon></el-button>
       </div>
-      <div class="product-grid">
-        <RouterLink
-          v-for="product in hotProducts"
-          :key="product.id"
-          :to="`/products/${product.id}`"
-          class="product-card card"
-        >
-          <img :src="product.image" :alt="product.name" />
-          <div class="product-card__body">
-            <h3>{{ product.name }}</h3>
-            <p class="muted">{{ product.detail }}</p>
-            <div class="product-card__price">
-              <strong>¥{{ product.price }}</strong>
-              <span v-if="product.oldPrice">¥{{ product.oldPrice }}</span>
+
+      <el-row :gutter="20">
+        <el-col v-for="product in hotProducts" :key="product.id" :span="6">
+          <el-card :body-style="{ padding: '0px' }" shadow="hover" class="product-card" @click="$router.push(`/products/${product.id}`)">
+            <div class="card-image-wrap">
+              <el-image :src="product.image" fit="cover" class="card-image" />
             </div>
-            <div class="product-card__meta">
-              <span>销量 {{ product.salesCount }}</span>
-              <span>库存 {{ product.stock }}</span>
+            <div class="card-body">
+              <h3 class="card-title">{{ product.name }}</h3>
+              <div class="price-row">
+                <span class="price">¥{{ product.price }}</span>
+                <span v-if="product.oldPrice" class="old-price">¥{{ product.oldPrice }}</span>
+              </div>
+              <div class="card-footer">
+                <span>销量 {{ product.salesCount }}</span>
+                <el-tag size="small" :type="product.stock > 0 ? 'info' : 'danger'">
+                  {{ product.stock > 0 ? '现货' : '补货中' }}
+                </el-tag>
+              </div>
             </div>
-          </div>
-        </RouterLink>
-      </div>
+          </el-card>
+        </el-col>
+      </el-row>
     </section>
-  </section>
+  </div>
 </template>
 
 <style scoped>
-.hero {
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
-  gap: 24px;
-  padding: 28px;
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
 }
 
-.hero__eyebrow {
-  display: inline-flex;
-  margin-bottom: 16px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(35, 176, 125, 0.14);
-  color: #9cf4cf;
-  font-size: 13px;
+.hero-carousel {
+  border-radius: 24px;
+  overflow: hidden;
+  margin-bottom: 30px;
 }
 
-.hero h1 {
-  font-size: 44px;
-  line-height: 1.15;
-  margin: 0 0 14px;
-}
-
-.hero__actions {
+.carousel-content {
+  height: 100%;
+  background-size: cover;
+  background-position: center;
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
+  align-items: center;
+  padding: 0 60px;
 }
 
-.hero__stats {
-  display: grid;
+.hero-text {
+  max-width: 600px;
+  color: white;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  padding: 6px 16px;
+  background: var(--el-color-primary);
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.hero-text h1 {
+  font-size: 48px;
+  margin: 0 0 20px;
+  line-height: 1.2;
+}
+
+.hero-text p {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-bottom: 32px;
+}
+
+.hero-actions {
+  display: flex;
   gap: 16px;
 }
 
-.hero-stat {
-  padding: 20px;
+.stat-banner {
+  margin-bottom: 40px;
 }
 
-.hero-stat strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 34px;
+.home-section {
+  margin-bottom: 40px;
 }
 
-.section {
-  margin-top: 28px;
-}
-
-.section__head {
+.section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
-.article-grid,
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+.title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.article-card,
-.product-card {
+.section-icon {
+  font-size: 24px;
+  color: var(--el-color-primary);
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.card-image-wrap {
+  position: relative;
+  height: 200px;
   overflow: hidden;
 }
 
-.article-card img,
-.product-card img {
+.card-image {
   width: 100%;
-  height: 220px;
-  object-fit: cover;
+  height: 100%;
+  transition: transform 0.5s ease;
 }
 
-.article-card__body,
-.product-card__body {
-  padding: 18px;
+.article-card:hover .card-image,
+.product-card:hover .card-image {
+  transform: scale(1.05);
 }
 
-.article-card h3,
-.product-card h3 {
-  margin: 12px 0 10px;
+.card-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
 }
 
-.article-card__meta,
-.product-card__meta,
-.product-card__price {
+.card-body {
+  padding: 20px;
+}
+
+.card-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  line-height: 1.4;
+  height: 50px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-desc {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 16px;
+  height: 40px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-  color: var(--text-soft);
+  font-size: 13px;
+  color: var(--el-text-color-placeholder);
 }
 
-.product-card__price strong {
-  color: #90f0c6;
-  font-size: 26px;
+.price-row {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.product-card__price span {
+.price {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-color-success);
+}
+
+.old-price {
+  font-size: 14px;
+  color: var(--el-text-color-placeholder);
   text-decoration: line-through;
-  color: var(--text-mute);
+}
+
+.article-card, .product-card {
+  cursor: pointer;
+  border: none;
+  background: var(--el-bg-color-overlay);
 }
 </style>
