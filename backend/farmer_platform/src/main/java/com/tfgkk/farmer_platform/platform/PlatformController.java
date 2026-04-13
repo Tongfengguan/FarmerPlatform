@@ -2,6 +2,7 @@ package com.tfgkk.farmer_platform.platform;
 
 import com.tfgkk.farmer_platform.auth.AuthInterceptor;
 import com.tfgkk.farmer_platform.common.ApiResponse;
+import com.tfgkk.farmer_platform.common.PagedResponse;
 import com.tfgkk.farmer_platform.platform.dto.AddressDto;
 import com.tfgkk.farmer_platform.platform.dto.AdminBootstrapDto;
 import com.tfgkk.farmer_platform.platform.dto.ArticleDto;
@@ -15,6 +16,8 @@ import com.tfgkk.farmer_platform.platform.dto.UserSummaryDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -48,9 +52,26 @@ public class PlatformController {
         return ApiResponse.success("Address saved", platformService.addAddress(currentUserId(request), body));
     }
 
+    @GetMapping("/api/platform/articles")
+    public ApiResponse<PagedResponse<ArticleDto>> articles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success("Articles fetched", PagedResponse.fromPage(platformService.listArticles(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))));
+    }
+
+    @GetMapping("/api/platform/products")
+    public ApiResponse<PagedResponse<ProductDto>> products(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success("Products fetched", PagedResponse.fromPage(platformService.listProducts(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))));
+    }
+
     @GetMapping("/api/platform/orders")
-    public ApiResponse<List<OrderDto>> orders(HttpServletRequest request) {
-        return ApiResponse.success("Orders fetched", platformService.listMyOrders(currentUserId(request)));
+    public ApiResponse<PagedResponse<OrderDto>> orders(
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success("Orders fetched", PagedResponse.fromPage(platformService.listMyOrders(currentUserId(request), PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))));
     }
 
     @PostMapping("/api/platform/orders")
@@ -139,9 +160,12 @@ public class PlatformController {
     }
 
     @GetMapping("/api/admin/orders")
-    public ApiResponse<List<OrderDto>> adminOrders(HttpServletRequest request) {
+    public ApiResponse<PagedResponse<OrderDto>> adminOrders(
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         platformService.assertAdmin(currentUserId(request));
-        return ApiResponse.success("Orders fetched", platformService.bootstrapAdmin().orders());
+        return ApiResponse.success("Orders fetched", PagedResponse.fromPage(platformService.listAllOrders(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))));
     }
 
     @PatchMapping("/api/admin/orders/{orderId}/ship")

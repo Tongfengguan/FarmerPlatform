@@ -21,12 +21,19 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PlatformService {
+
+    private static final Random RANDOM = new Random();
 
     private final ArticleRepository articleRepository;
     private final ProductRepository productRepository;
@@ -48,21 +55,45 @@ public class PlatformService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ArticleDto> listArticles(Pageable pageable) {
+        return articleRepository.findAll(pageable).map(this::toArticleDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductDto> listProducts(Pageable pageable) {
+        return productRepository.findAll(pageable).map(this::toProductDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderDto> listMyOrders(Long userId, Pageable pageable) {
+        return orderRepository.findByUserId(userId, pageable).map(this::toOrderDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderDto> listAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable).map(this::toOrderDto);
+    }
+
+    @Transactional(readOnly = true)
     public PlatformBootstrapDto bootstrapPublic() {
+        Pageable articlePage = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id"));
+        Pageable productPage = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
         return new PlatformBootstrapDto(
                 buildDashboard(),
-                articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList(),
-                productRepository.findAll().stream().map(this::toProductDto).sorted(Comparator.comparing(ProductDto::id).reversed()).toList());
+                articleRepository.findAll(articlePage).stream().map(this::toArticleDto).toList(),
+                productRepository.findAll(productPage).stream().map(this::toProductDto).toList());
     }
 
     @Transactional(readOnly = true)
     public AdminBootstrapDto bootstrapAdmin() {
+        Pageable recentPage = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id"));
+        Pageable orderPage = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         return new AdminBootstrapDto(
                 buildDashboard(),
-                articleRepository.findAll().stream().map(this::toArticleDto).sorted(Comparator.comparing(ArticleDto::id).reversed()).toList(),
-                productRepository.findAll().stream().map(this::toProductDto).sorted(Comparator.comparing(ProductDto::id).reversed()).toList(),
+                articleRepository.findAll(recentPage).stream().map(this::toArticleDto).toList(),
+                productRepository.findAll(recentPage).stream().map(this::toProductDto).toList(),
                 listUsers(),
-                orderRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toOrderDto).toList());
+                orderRepository.findAll(orderPage).stream().map(this::toOrderDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -183,13 +214,16 @@ public class PlatformService {
 
     @Transactional(readOnly = true)
     public List<UserSummaryDto> listUsers() {
-        List<OrderEntity> orders = orderRepository.findAllByOrderByCreatedAtDesc();
-        return userAccountRepository.findAll().stream().map(user -> {
-            List<OrderEntity> userOrders = orders.stream().filter(order -> order.getUser().getId().equals(user.getId())).toList();
-            int spend = userOrders.stream().filter(order -> !"已取消".equals(order.getStatus())).mapToInt(OrderEntity::getPayAmount).sum();
-            String lastActive = userOrders.isEmpty() ? LocalDate.now().toString() : userOrders.get(0).getCreatedAt().toLocalDate().toString();
-            return new UserSummaryDto(user.getId(), user.getAccount(), user.getPhone(), Boolean.TRUE.equals(user.getEnabled()) ? "正常" : "禁用", user.getCreatedAt().toLocalDate().toString(), userOrders.size(), spend, lastActive);
-        }).sorted(Comparator.comparing(UserSummaryDto::id)).toList();
+        return userAccountRepository.findUserSummaries().stream().map(row -> new UserSummaryDto(
+                ((Number) row[0]).longValue(),
+                (String) row[1],
+                (String) row[2],
+                (String) row[3],
+                row[4].toString(),
+                ((Number) row[5]).intValue(),
+                ((Number) row[6]).intValue(),
+                row[7].toString()
+        )).toList();
     }
 
     @Transactional
@@ -319,5 +353,8 @@ public class PlatformService {
         return sku;
     }
 
-    private String generateOrderId() { return String.valueOf(System.currentTimeMillis()); }
+    private String generateOrderId() {
+        return LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"))
+                + String.format("%04d", RANDOM.nextInt(10000));
+    }
 }
