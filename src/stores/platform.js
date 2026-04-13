@@ -44,10 +44,10 @@ export const usePlatformStore = defineStore('platform', {
     },
     applyBootstrap(data) {
       this.dashboard = data.dashboard ?? this.dashboard
-      this.articles = data.articles ?? this.articles
-      this.products = data.products ?? this.products
+      this.articles = data.articles?.content ?? data.articles ?? this.articles
+      this.products = data.products?.content ?? data.products ?? this.products
       this.users = data.users ?? this.users
-      this.orders = data.orders ?? this.orders
+      this.orders = data.orders?.content ?? data.orders ?? this.orders
       this.latestArticleTip =
         this.articles.find((article) => article.isPush && article.status === '已发布') ?? null
     },
@@ -62,7 +62,8 @@ export const usePlatformStore = defineStore('platform', {
       } else {
         this.currentUser.addressBook = addresses
       }
-      this.orders = await getJson('/api/platform/orders')
+      const orderData = await getJson('/api/platform/orders')
+      this.orders = orderData?.content ?? orderData ?? []
 
       if (role === 'admin') {
         const adminData = await getJson('/api/admin/bootstrap')
