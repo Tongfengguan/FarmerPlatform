@@ -187,12 +187,15 @@ onMounted(async () => {
   position: relative;
   height: 240px;
   overflow: hidden;
+  background-color: var(--el-fill-color-darker); /* 统一深色背景 */
 }
 
 .product-image {
   width: 100%;
   height: 100%;
-  transition: transform 0.5s ease;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .product-card:hover .product-image {

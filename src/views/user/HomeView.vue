@@ -163,11 +163,16 @@ const banners = [
   display: flex;
   align-items: center;
   padding: 0 60px;
+  /* 防止切换或悬浮交互时的抖动 */
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .hero-text {
   max-width: 600px;
   color: white;
+  /* 增加文字阴影提高可读性 */
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .hero-eyebrow {
@@ -232,12 +237,15 @@ const banners = [
   position: relative;
   height: 200px;
   overflow: hidden;
+  background-color: var(--el-fill-color-darker); /* 替换白色背景为深色 */
 }
 
 .card-image {
   width: 100%;
   height: 100%;
-  transition: transform 0.5s ease;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  backface-visibility: hidden; /* 防止抖动 */
+  transform: translateZ(0);
 }
 
 .article-card:hover .card-image,
