@@ -13,7 +13,9 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "order_record")
 public class OrderEntity {
@@ -62,33 +64,4 @@ public class OrderEntity {
 
     @Column(nullable = false, length = 255)
     private String receiverAddress;
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public UserAccount getUser() { return user; }
-    public void setUser(UserAccount user) { this.user = user; }
-    public String getBuyer() { return buyer; }
-    public void setBuyer(String buyer) { this.buyer = buyer; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public List<OrderItem> getItems() { return items; }
-    public void setItems(List<OrderItem> items) { this.items = items; }
-    public Integer getPayAmount() { return payAmount; }
-    public void setPayAmount(Integer payAmount) { this.payAmount = payAmount; }
-    public Integer getFreightAmount() { return freightAmount; }
-    public void setFreightAmount(Integer freightAmount) { this.freightAmount = freightAmount; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public String getShipCompany() { return shipCompany; }
-    public void setShipCompany(String shipCompany) { this.shipCompany = shipCompany; }
-    public String getShipNo() { return shipNo; }
-    public void setShipNo(String shipNo) { this.shipNo = shipNo; }
-    public String getReceiverName() { return receiverName; }
-    public void setReceiverName(String receiverName) { this.receiverName = receiverName; }
-    public String getReceiverPhone() { return receiverPhone; }
-    public void setReceiverPhone(String receiverPhone) { this.receiverPhone = receiverPhone; }
-    public String getReceiverAddress() { return receiverAddress; }
-    public void setReceiverAddress(String receiverAddress) { this.receiverAddress = receiverAddress; }
 }
