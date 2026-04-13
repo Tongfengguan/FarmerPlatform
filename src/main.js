@@ -1,11 +1,13 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
+import './styles.css'
 
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { usePlatformStore } from './stores/platform'
-import './styles.css'
 
 const app = createApp(App)
 const pinia = createPinia()

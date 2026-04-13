@@ -1,147 +1,265 @@
 <script setup>
 import { computed } from 'vue'
 import { usePlatformStore } from '../../stores/platform'
+import { 
+  User, 
+  Money, 
+  ShoppingCart, 
+  Document,
+  ArrowRight
+} from '@element-plus/icons-vue'
 
 const store = usePlatformStore()
-const latestOrders = computed(() => store.orders.slice(0, 4))
+const latestOrders = computed(() => store.orders.slice(0, 5))
 
-const badgeClass = (value) => {
-  if (value === '待发货') return 'badge-warning'
-  if (value === '待收货') return 'badge-info'
-  if (value === '已完成') return 'badge-success'
-  if (value === '退款中') return 'badge-danger'
-  return 'badge-muted'
+const getTagType = (status) => {
+  if (status === '待付款') return 'info'
+  if (status === '待发货') return 'warning'
+  if (status === '待收货') return 'primary'
+  if (status === '已完成') return 'success'
+  if (status === '已取消') return 'danger'
+  return ''
 }
 </script>
 
 <template>
-  <section>
-    <div class="admin-page-head">
-      <h1>数据概览</h1>
-      <p class="muted">2025 年 3 月 · 实时模拟数据</p>
+  <div class="dashboard-container">
+    <div class="page-header">
+      <h1 class="page-title">数据概览</h1>
+      <p class="page-subtitle">2026 年 4 月 · 实时模拟数据</p>
     </div>
 
-    <div class="stat-grid">
-      <div class="stat-card card">
-        <span class="muted">今日访问量</span>
-        <strong>{{ store.dashboard.visitToday }}</strong>
-      </div>
-      <div class="stat-card card">
-        <span class="muted">本月销售额</span>
-        <strong>¥{{ store.dashboard.salesMonth.toLocaleString() }}</strong>
-      </div>
-      <div class="stat-card card">
-        <span class="muted">待处理订单</span>
-        <strong>{{ store.dashboard.pendingOrders }}</strong>
-      </div>
-      <div class="stat-card card">
-        <span class="muted">已发布资讯</span>
-        <strong>{{ store.dashboard.publishedArticles }}</strong>
-      </div>
-    </div>
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="stat-row">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <template #default>
+            <div class="stat-content">
+              <div class="stat-icon-wrapper" style="background: rgba(64, 158, 255, 0.1); color: #409eff;">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-label">今日访问量</div>
+                <div class="stat-value">{{ store.dashboard.visitToday }}</div>
+              </div>
+            </div>
+          </template>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <template #default>
+            <div class="stat-content">
+              <div class="stat-icon-wrapper" style="background: rgba(103, 194, 58, 0.1); color: #67c23a;">
+                <el-icon><Money /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-label">本月销售额</div>
+                <div class="stat-value">¥{{ store.dashboard.salesMonth.toLocaleString() }}</div>
+              </div>
+            </div>
+          </template>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <template #default>
+            <div class="stat-content">
+              <div class="stat-icon-wrapper" style="background: rgba(230, 162, 70, 0.1); color: #e6a23c;">
+                <el-icon><ShoppingCart /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-label">待处理订单</div>
+                <div class="stat-value">{{ store.dashboard.pendingOrders }}</div>
+              </div>
+            </div>
+          </template>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <template #default>
+            <div class="stat-content">
+              <div class="stat-icon-wrapper" style="background: rgba(144, 147, 153, 0.1); color: #909399;">
+                <el-icon><Document /></el-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-label">已发布资讯</div>
+                <div class="stat-value">{{ store.dashboard.publishedArticles }}</div>
+              </div>
+            </div>
+          </template>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <div class="chart-grid">
-      <div class="card chart-card">
-        <h3>各分类资讯阅读量</h3>
-        <div v-for="item in store.dashboard.articleReads" :key="item.name" class="bar-row">
-          <span>{{ item.name }}</span>
-          <div class="bar-track">
-            <div class="bar-fill" :style="{ width: `${item.value / 50}%`, background: item.color }"></div>
+    <!-- 图表展示 -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :span="12">
+        <el-card shadow="never" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>各分类资讯阅读量</span>
+            </div>
+          </template>
+          <div class="chart-content">
+            <div v-for="item in store.dashboard.articleReads" :key="item.name" class="progress-item">
+              <div class="progress-label">
+                <span>{{ item.name }}</span>
+                <span>{{ item.value }} 次</span>
+              </div>
+              <el-progress :percentage="Math.min(100, item.value / 50)" :color="item.color" :show-text="false" />
+            </div>
           </div>
-          <span>{{ item.value }}</span>
-        </div>
-      </div>
-      <div class="card chart-card">
-        <h3>商品分类销售额占比</h3>
-        <div v-for="item in store.dashboard.salesByCategory" :key="item.name" class="bar-row">
-          <span>{{ item.name }}</span>
-          <div class="bar-track">
-            <div class="bar-fill" :style="{ width: `${item.value / 800}%`, background: item.color }"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>商品分类销售额占比</span>
+            </div>
+          </template>
+          <div class="chart-content">
+            <div v-for="item in store.dashboard.salesByCategory" :key="item.name" class="progress-item">
+              <div class="progress-label">
+                <span>{{ item.name }}</span>
+                <span>¥{{ item.value.toLocaleString() }}</span>
+              </div>
+              <el-progress :percentage="Math.min(100, item.value / 800 * 100)" :color="item.color" :show-text="false" />
+            </div>
           </div>
-          <span>¥{{ item.value.toLocaleString() }}</span>
-        </div>
-      </div>
-    </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <div class="card table-card">
-      <h3>最新订单</h3>
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>订单号</th>
-              <th>买家</th>
-              <th>商品</th>
-              <th>金额</th>
-              <th>状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="order in latestOrders" :key="order.id">
-              <td>{{ order.id }}</td>
-              <td>{{ order.buyer }}</td>
-              <td>{{ order.items[0].name }}</td>
-              <td>¥{{ order.payAmount }}</td>
-              <td><span class="badge" :class="badgeClass(order.status)">{{ order.status }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+    <!-- 最新订单列表 -->
+    <el-card shadow="never" class="table-card">
+      <template #header>
+        <div class="card-header">
+          <span>最新订单</span>
+          <el-button link type="primary" @click="$router.push('/admin/orders')">
+            查看全部 <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+      </template>
+      <el-table :data="latestOrders" style="width: 100%">
+        <el-table-column prop="id" label="订单号" width="180" />
+        <el-table-column prop="buyer" label="买家" width="120" />
+        <el-table-column label="商品">
+          <template #default="{ row }">
+            {{ row.items[0]?.name }}等 {{ row.items.length }} 件
+          </template>
+        </el-table-column>
+        <el-table-column label="支付金额">
+          <template #default="{ row }">
+            <span class="price">¥{{ row.payAmount.toLocaleString() }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getTagType(row.status)">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
 </template>
 
 <style scoped>
-.admin-page-head h1 {
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
   margin: 0 0 8px;
-  font-size: 34px;
 }
 
-.stat-grid,
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 20px;
+.page-subtitle {
+  color: var(--el-text-color-secondary);
+  margin: 0;
 }
 
-.chart-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.stat-row {
+  margin-bottom: 20px;
 }
 
-.stat-card,
-.chart-card,
-.table-card {
-  padding: 22px;
+.stat-card {
+  border: none;
+  background: var(--el-bg-color-overlay);
 }
 
-.stat-card strong {
-  display: block;
-  margin-top: 12px;
-  font-size: 36px;
-}
-
-.bar-row {
-  display: grid;
-  grid-template-columns: 88px 1fr 80px;
-  gap: 12px;
+.stat-content {
+  display: flex;
   align-items: center;
-  margin-top: 16px;
+  gap: 16px;
 }
 
-.bar-track {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+.stat-icon-wrapper {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
 }
 
-.bar-fill {
-  height: 100%;
-  border-radius: inherit;
+.stat-label {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.chart-row {
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+}
+
+.chart-content {
+  padding: 10px 0;
+}
+
+.progress-item {
+  margin-bottom: 20px;
+}
+
+.progress-item:last-child {
+  margin-bottom: 0;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.price {
+  font-weight: 600;
+  color: var(--el-color-success);
 }
 
 .table-card {
-  margin-top: 18px;
+  margin-bottom: 20px;
 }
 </style>
