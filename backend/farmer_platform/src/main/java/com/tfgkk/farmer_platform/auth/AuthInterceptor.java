@@ -19,6 +19,23 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 放行 OPTIONS 预检请求
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
+        // 获取请求路径
+        String path = request.getRequestURI();
+        // 如果是登录、注册、重置密码或者获取产品列表等公开接口，直接放行
+        if (path.contains("/api/auth/login") || 
+            path.contains("/api/auth/register") || 
+            path.contains("/api/auth/reset-password") ||
+            path.contains("/api/platform/products") ||
+            path.contains("/api/platform/bootstrap") ||
+            path.contains("/api/platform/articles")) {
+            return true;
+        }
+
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new BusinessException("Authentication token is required");

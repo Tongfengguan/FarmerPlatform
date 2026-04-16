@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
-import { orderStatuses } from '../../data/mockData'
+import { orderStatuses } from '../../utils/constants'
 import { usePlatformStore } from '../../stores/platform'
 import { Search, InfoFilled, Van, CircleCheck, Money } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

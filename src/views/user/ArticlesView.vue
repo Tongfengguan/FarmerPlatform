@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { articleCategories } from '../../data/mockData'
+import { articleCategories } from '../../utils/constants'
 import { usePlatformStore } from '../../stores/platform'
 import { Search, View, Calendar, TopRight } from '@element-plus/icons-vue'
 

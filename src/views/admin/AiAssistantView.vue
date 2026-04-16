@@ -67,17 +67,26 @@ const handleSend = async () => {
         try {
           const data = JSON.parse(dataStr)
           if (data.content) {
+            // 将新内容追加到消息中
             chatList.value[aiMsgIndex].text += data.content
+            
+            // 【增强版防护】：处理可能被后端截断或破坏的标签碎片
+            chatList.value[aiMsgIndex].text = chatList.value[aiMsgIndex].text
+              .replace(/<[^>]*?>[\s\S]*?<\/[^>]*?>/g, '') // 完整块
+              .replace(/[｜|]DSML[｜|][^>]*>?/g, '')       // 捕获丢失了 < 的碎片
+              .replace(/<[^>]*?DSML[^>]*?>/g, '')         // 捕获不完整的起始标签
+              .replace(/<[^>]*>[\s\S]*/g, '')            // 捕获未闭合的标签
+              .replace(/<\/[^>]*>/g, '');                // 清理闭合尾部
+
             scrollToBottom()
           }
           if (data.error) throw new Error(data.error)
-        } catch (e) {
-          // 只有在确定不是残缺行的情况下才记录错误
-          console.warn('流式解析跳过一行:', trimmedLine)
+        } catch {
+          // 忽略解析错误
         }
       }
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('AI 服务暂时不可用')
     chatList.value[aiMsgIndex].text = '抱歉，我现在无法连接到分析引擎，请稍后再试。'
   } finally {

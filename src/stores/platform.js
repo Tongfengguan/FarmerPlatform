@@ -1,20 +1,20 @@
 import { defineStore } from 'pinia'
-import { currentUser, dashboardStats, initialArticles, initialOrders, initialProducts, initialUsers } from '../data/mockData.js'
+import { currentUserPlaceholder, dashboardStatsPlaceholder } from '../utils/constants.js'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../utils/http.js'
 
 export const usePlatformStore = defineStore('platform', {
   state: () => ({
-    dashboard: dashboardStats,
-    currentUser: JSON.parse(JSON.stringify(currentUser)),
-    articles: initialArticles,
-    articleTotal: initialArticles.length,
-    products: initialProducts,
-    productTotal: initialProducts.length,
-    users: initialUsers,
-    orders: initialOrders,
-    orderTotal: initialOrders.length,
+    dashboard: dashboardStatsPlaceholder,
+    currentUser: JSON.parse(JSON.stringify(currentUserPlaceholder)),
+    articles: [],
+    articleTotal: 0,
+    products: [],
+    productTotal: 0,
+    users: [],
+    orders: [],
+    orderTotal: 0,
     cart: [],
-    latestArticleTip: initialArticles.find((article) => article.isPush && article.status === '已发布') ?? null,
+    latestArticleTip: null,
   }),
   getters: {
     publishedArticles(state) {
@@ -247,7 +247,7 @@ export const usePlatformStore = defineStore('platform', {
     },
     resetClientState() {
       this.cart = []
-      this.currentUser = JSON.parse(JSON.stringify(currentUser))
+      this.currentUser = JSON.parse(JSON.stringify(currentUserPlaceholder))
       this.orders = []
       this.users = []
     },

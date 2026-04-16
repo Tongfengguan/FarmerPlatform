@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
-import { productCategories } from '../../data/mockData'
+import { productCategories } from '../../utils/constants'
 import { usePlatformStore } from '../../stores/platform'
 import { Plus, Edit, Search, Picture } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
-import { productCategories } from '../../data/mockData'
+import { productCategories } from '../../utils/constants'
 import { usePlatformStore } from '../../stores/platform'
 import { Search, Sort, ShoppingBag } from '@element-plus/icons-vue'
 
