@@ -70,13 +70,8 @@ const handleSend = async () => {
             // 将新内容追加到消息中
             chatList.value[aiMsgIndex].text += data.content
             
-            // 【增强版防护】：处理可能被后端截断或破坏的标签碎片
-            chatList.value[aiMsgIndex].text = chatList.value[aiMsgIndex].text
-              .replace(/<[^>]*?>[\s\S]*?<\/[^>]*?>/g, '') // 完整块
-              .replace(/[｜|]DSML[｜|][^>]*>?/g, '')       // 捕获丢失了 < 的碎片
-              .replace(/<[^>]*?DSML[^>]*?>/g, '')         // 捕获不完整的起始标签
-              .replace(/<[^>]*>[\s\S]*/g, '')            // 捕获未闭合的标签
-              .replace(/<\/[^>]*>/g, '');                // 清理闭合尾部
+            // 使用工具函数进行实时清理
+            chatList.value[aiMsgIndex].text = sanitizeAiStream(chatList.value[aiMsgIndex].text)
 
             scrollToBottom()
           }
@@ -210,6 +205,34 @@ const handleSend = async () => {
 .ai-msg .msg-bubble {
   background-color: var(--el-fill-color-darker);
   color: var(--el-text-color-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.user-msg .msg-bubble {
+  background-color: var(--el-color-primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.loading-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-input-area {
+  padding: 24px 30px;
+  background-color: var(--el-fill-color-blank);
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+</style>
+lor: var(--el-text-color-primary);
   border-bottom-left-radius: 4px;
 }
 

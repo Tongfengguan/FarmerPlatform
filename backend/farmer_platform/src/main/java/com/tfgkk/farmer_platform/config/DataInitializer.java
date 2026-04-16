@@ -1,8 +1,8 @@
 package com.tfgkk.farmer_platform.config;
 
-import com.tfgkk.farmer_platform.user.UserAccount;
-import com.tfgkk.farmer_platform.user.UserAccountRepository;
-import com.tfgkk.farmer_platform.user.UserRole;
+import com.tfgkk.farmer_platform.entity.UserAccount;
+import com.tfgkk.farmer_platform.repository.UserAccountRepository;
+import com.tfgkk.farmer_platform.entity.UserRole;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;

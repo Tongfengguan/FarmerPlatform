@@ -1,9 +1,12 @@
 const authStorageKey = 'farmer-platform-auth'
 
+/**
+ * 安全解析 JSON 响应
+ * @param {Response} response 
+ */
 const parseJsonSafely = async (response) => {
   const text = await response.text()
   if (!text) return null
-
   try {
     return JSON.parse(text)
   } catch {
@@ -11,10 +14,12 @@ const parseJsonSafely = async (response) => {
   }
 }
 
+/**
+ * 获取本地存储的 Token
+ */
 const getSessionToken = () => {
   const raw = localStorage.getItem(authStorageKey)
   if (!raw) return ''
-
   try {
     return JSON.parse(raw)?.token ?? ''
   } catch {
@@ -22,6 +27,22 @@ const getSessionToken = () => {
   }
 }
 
+/**
+ * 处理未授权请求（401）
+ */
+const handleUnauthorized = () => {
+  localStorage.removeItem(authStorageKey)
+  // 如果当前不是登录页，则重定向
+  if (!window.location.pathname.includes('/auth')) {
+    window.location.href = '/#/auth'
+  }
+}
+
+/**
+ * 通用 JSON 请求封装
+ * @param {string} url 
+ * @param {RequestInit} options 
+ */
 const requestJson = async (url, options = {}) => {
   const token = getSessionToken()
   const headers = {
@@ -32,22 +53,39 @@ const requestJson = async (url, options = {}) => {
     headers.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
 
-  const result = await parseJsonSafely(response)
+    // 处理 401 未授权
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error('登录已过期，请重新登录')
+    }
 
-  if (!response.ok || result?.success === false) {
-    throw new Error(result?.message || '请求失败，请稍后重试')
+    const result = await parseJsonSafely(response)
+
+    if (!response.ok || result?.success === false) {
+      throw new Error(result?.message || '请求失败，请稍后重试')
+    }
+
+    return result?.data ?? null
+  } catch (error) {
+    // 向上抛出错误，供组件处理（显示 ElMessage 等）
+    throw error
   }
-
-  return result?.data ?? null
 }
 
+/**
+ * GET 请求
+ */
 export const getJson = async (url) => requestJson(url, { method: 'GET' })
 
+/**
+ * POST 请求
+ */
 export const postJson = async (url, payload) =>
   requestJson(url, {
     method: 'POST',
@@ -55,6 +93,9 @@ export const postJson = async (url, payload) =>
     body: JSON.stringify(payload),
   })
 
+/**
+ * PUT 请求
+ */
 export const putJson = async (url, payload) =>
   requestJson(url, {
     method: 'PUT',
@@ -62,6 +103,9 @@ export const putJson = async (url, payload) =>
     body: JSON.stringify(payload),
   })
 
+/**
+ * PATCH 请求
+ */
 export const patchJson = async (url, payload) =>
   requestJson(url, {
     method: 'PATCH',
@@ -69,6 +113,9 @@ export const patchJson = async (url, payload) =>
     body: payload === undefined ? undefined : JSON.stringify(payload),
   })
 
+/**
+ * DELETE 请求
+ */
 export const deleteJson = async (url) =>
   requestJson(url, {
     method: 'DELETE',

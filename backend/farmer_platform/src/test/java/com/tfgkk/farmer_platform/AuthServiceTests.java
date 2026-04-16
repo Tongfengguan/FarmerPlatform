@@ -3,10 +3,10 @@ package com.tfgkk.farmer_platform;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.tfgkk.farmer_platform.auth.AuthService;
-import com.tfgkk.farmer_platform.auth.dto.LoginRequest;
-import com.tfgkk.farmer_platform.auth.dto.RegisterRequest;
-import com.tfgkk.farmer_platform.auth.dto.ResetPasswordRequest;
+import com.tfgkk.farmer_platform.service.AuthService;
+import com.tfgkk.farmer_platform.dto.auth.LoginRequest;
+import com.tfgkk.farmer_platform.dto.auth.RegisterRequest;
+import com.tfgkk.farmer_platform.dto.auth.ResetPasswordRequest;
 import com.tfgkk.farmer_platform.common.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -21,32 +21,62 @@ if (!DEEPSEEK_API_KEY) {
   process.exit(1);
 }
 
-// 2. 定义分析工具
+// --- 工具函数 ---
+
+/**
+ * 强力清理文本中的所有 XML/DSML 标签
+ */
+const sanitizeContent = (text: string): string => {
+  return text
+    .replace(/<[^>]*?>[\s\S]*?<\/[^>]*?>/g, "") // 匹配并删除完整的闭合块
+    .replace(/[<｜|]DSML[｜|][^>]*>?/g, "")      // 匹配并删除 DSML 标签碎片
+    .replace(/function_calls>?/g, "")           // 清理可能的残留关键字
+    .replace(/invoke[^>]*>?/g, "")
+    .replace(/<[^>]*?>/g, "")                   // 清理所有剩余的尖括号标签
+    .trim();
+};
+
+/**
+ * 后端 API 直连配置 (绕过代理)
+ */
+const apiClient = axios.create({
+  baseURL: PLATFORM_BASE_URL,
+  timeout: 5000,
+  proxy: false,
+});
+
+// --- AI 配置 ---
+
+const baseConfig = {
+  modelName: "deepseek-chat", 
+  openAIApiKey: DEEPSEEK_API_KEY,
+  configuration: { baseURL: "https://api.deepseek.com" },
+  temperature: 0.3,
+};
+
+const llm = new ChatOpenAI({ ...baseConfig, streaming: false });
+const streamingLlm = new ChatOpenAI({ ...baseConfig, streaming: true });
+
+// 禁用 tiktoken 警告
+llm.getNumTokens = async () => 0;
+streamingLlm.getNumTokens = async () => 0;
+
+// --- 业务工具 ---
+
 const getPlatformProductsTool = tool(
   async () => {
-    const targetUrl = `${PLATFORM_BASE_URL}/platform/products`;
-    console.log(`[Tool] Fetching: ${targetUrl}`);
+    console.log(`[Tool] Fetching products...`);
     try {
-      const response = await axios.get(targetUrl, {
-        params: { page: 0, size: 100 },
-        timeout: 5000,
-        proxy: false, // 禁用系统代理，防止 502
-      });
+      const response = await apiClient.get("/platform/products", { params: { page: 0, size: 100 } });
       if (response.data.success) {
         const products = response.data.data.content.map((p: any) => ({
-          name: p.name,
-          price: p.price,
-          stock: p.stock,
-          sales: p.salesCount,
-          category: `${p.categoryL1} > ${p.categoryL2}`
+          name: p.name, price: p.price, stock: p.stock, sales: p.salesCount, category: `${p.categoryL1} > ${p.categoryL2}`
         }));
-        console.log(`[Tool] Successfully fetched ${products.length} products.`);
         return JSON.stringify(products);
       }
-      return "获取后端数据失败，接口返回 success 为 false。";
+      return "获取数据失败。";
     } catch (error: any) {
-      console.error(`[Tool Error] ${error.message}`);
-      return `无法连接到后端 API (${PLATFORM_BASE_URL})。请检查后端服务是否正在运行。错误信息: ${error.message}`;
+      return `连接后端失败: ${error.message}`;
     }
   },
   {
@@ -56,80 +86,72 @@ const getPlatformProductsTool = tool(
   }
 );
 
-// 3. AI 逻辑封装
-const baseConfig = {
-  modelName: "deepseek-chat", 
-  openAIApiKey: DEEPSEEK_API_KEY,
-  configuration: { baseURL: "https://api.deepseek.com" },
-  temperature: 0,
-};
-
-const llm = new ChatOpenAI({ ...baseConfig, streaming: false });
-const streamingLlm = new ChatOpenAI({ ...baseConfig, streaming: true });
-
-// 屏蔽报错
-llm.getNumTokens = async () => 0;
-streamingLlm.getNumTokens = async () => 0;
-
 const tools = [getPlatformProductsTool];
 const modelWithTools = llm.bindTools(tools);
 
-// 4. API 接口
+// --- 路由 ---
+
+app.get("/api/analyze", (req, res) => {
+  res.send("AI Agent Service is running.");
+});
+
 app.post("/api/analyze", async (req: Request, res: Response) => {
   const { question } = req.body;
-  console.log(`[User Request] ${question}`);
+  console.log(`[Request] ${question}`);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
+  const sendChunk = (content: string) => {
+    res.write(`data: ${JSON.stringify({ content })}\n\n`);
+  };
+
   try {
-    const messages: any[] = [
-      { role: "system", content: "你是一个智慧三农系统的 AI 专家。请使用工具获取数据并回答问题。" },
+    // 阶段 1: 意图识别与工具调用
+    const initialMessages: any[] = [
+      { role: "system", content: "你是一个智慧三农专家助手。请调用工具获取实时数据。" },
       { role: "user", content: question }
     ];
 
-    // 第一阶段：判定并调用工具
-    const response = await modelWithTools.invoke(messages);
+    const response = await modelWithTools.invoke(initialMessages);
     
+    let allToolResults = "";
     if (response.tool_calls && response.tool_calls.length > 0) {
-      console.log(`[Agent] Executing tools...`);
-      let allToolResults = "";
+      console.log(`[Agent] Calling ${response.tool_calls.length} tools...`);
       for (const toolCall of response.tool_calls) {
         const toolInstance = tools.find(t => t.name === toolCall.name);
         if (toolInstance) {
           const result = await (toolInstance as any).invoke(toolCall.args);
-          allToolResults += `\n[${toolCall.name} 结果]: ${result}\n`;
+          allToolResults += `\n[工具结果]: ${result}\n`;
         }
       }
-      
-      // 第二阶段：生成报告 (Safe Summary)
-      console.log("[Agent] Streaming concise report to UI...");
-      const summaryMessages = [
-        { role: "system", content: "你是一个高效的数据分析助理。请根据数据给出极其精简、直击重点的分析。使用 3-4 个要点说明，总字数控制在 200 字以内。严禁输出任何标签，直接给结论。" },
-        { role: "user", content: `用户问题：${question}\n\n实时业务数据：\n${allToolResults}\n\n请简要分析并给出建议：` }
-      ];
+    }
 
-      const stream = await streamingLlm.stream(summaryMessages);
-      for await (const chunk of stream) {
-        if (chunk.content) {
-          res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
-        }
+    // 阶段 2: 干净总结 (Safe Summary)
+    const summaryMessages = [
+      { 
+        role: "system", 
+        content: "你是一个高效的数据分析师。请根据提供的业务数据给出精简的分析。要求：3-4个要点，总数200字内，严禁输出任何标签或思维链。" 
+      },
+      { 
+        role: "user", 
+        content: `问题：${question}\n\n数据：${allToolResults || "未获取到外部数据"}\n\n请总结：` 
       }
-    } else {
-      console.log("[Agent] No tools needed, replying directly.");
-      const stream = await streamingLlm.stream(messages);
-      for await (const chunk of stream) {
-        if (chunk.content) {
-          res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
-        }
+    ];
+
+    const stream = await streamingLlm.stream(summaryMessages);
+    for await (const chunk of stream) {
+      if (chunk.content) {
+        const cleanChunk = sanitizeContent(chunk.content as string);
+        if (cleanChunk) sendChunk(cleanChunk);
       }
     }
     
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (error: any) {
-    console.error("[Fatal Error] ", error.message);
+    console.error("[Error]", error.message);
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
@@ -137,5 +159,5 @@ app.post("/api/analyze", async (req: Request, res: Response) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 AI Agent is ready on http://127.0.0.1:${PORT}`);
+  console.log(`🚀 AI Agent refactored and running on port ${PORT}`);
 });
