@@ -10,8 +10,7 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 ### Backend (Spring Boot)
 - **Language/Framework:** Java 21, Spring Boot 4.
 - **Data Persistence:** Spring Data JPA with MySQL.
-- **Authentication:** Custom JWT-based authentication using `AuthInterceptor` and `JwtService`.
-- **Engineering:** Lombok integrated for reduced boilerplate.
+- **Authentication:** Custom JWT-based authentication using `AuthInterceptor` and `JwtService`. **Fixed**: Interceptor now correctly handles OPTIONS requests and allows anonymous access to login/register/public-products.
 - **Key Packages:**
   - `auth`: Authentication logic, JWT handling, and login/register DTOs.
   - `common`: Standard `ApiResponse<T>` and `PagedResponse<T>` wrappers.
@@ -20,34 +19,36 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 
 ### Frontend (Vue.js)
 - **Framework:** Vue.js 3 (Composition API).
-- **UI Component Library:** **Element Plus** (fully integrated with Auto-import and Dark Mode).
-- **State Management:** Pinia (surgical updates for optimized performance).
-- **Routing:** Vue Router.
-- **HTTP Client:** Custom `fetch` wrapper and `axios` for AI services.
-- **Visuals:** Modern aesthetic with refined transitions, hover effects, and stabilized carousels.
+- **UI Library:** Element Plus (Auto-import and Dark Mode).
+- **State Management:** Pinia.
+- **Business Logic**: **Strictly real-data driven**. Mock data (`mockData.js`) has been completely removed. Business categories and statuses are centralized in `src/utils/constants.js`.
 
 ### AI Agent Service (DeepSeek)
 - **Framework:** LangChain (Node.js/TypeScript).
-- **Model:** DeepSeek-V3 / DeepSeek-Chat.
-- **Capabilities:** Real-time business data analysis, tool calling (connects to Farmer Platform backend), and streaming responses (SSE).
+- **Architecture**: **Safe Summary Mode**. 
+  - **Step 1**: Identify tool call and fetch raw data from backend.
+  - **Step 2**: Discard complex protocol history and initiate a clean summary context to prevent `<｜DSML｜>` tag leakage.
+- **Capabilities**: Concise business analysis (max 200 words), direct concluding points, and tool calling via backend API.
 
 ## Core Mandates & Conventions
 
 ### 1. Technical Integrity
-- **Surgical Updates:** When modifying code, adhere strictly to existing patterns.
-- **Pagination First:** Always use `Pageable` for list-based API endpoints.
-- **DTO Mutations:** Refactor mutation endpoints to return the single updated entity rather than full lists.
+- **No Mock Data**: Do not introduce mock data files. All views must fetch data from the Spring Boot API.
+- **Surgical Updates**: Adhere strictly to existing patterns.
+- **Pagination First**: Always use `Pageable` for list-based API endpoints.
+- **Safe AI Response**: Maintain the multi-stage regex filtering in both `index.ts` (backend) and `AiAssistantView.vue` (frontend) to ensure pure text output.
 
 ### 2. UI/UX Standards
-- **Element Plus:** Prefer Element Plus components over manual CSS/HTML where applicable.
-- **Stability:** Ensure visual stability (e.g., `backface-visibility`, `transform: translateZ(0)`) for animations.
-- **Dark Theme:** Maintain consistency with the established dark green/grey theme.
+- **Element Plus**: Prefer Element Plus components.
+- **Stability**: Ensure visual stability for animations.
+- **Concise AI**: AI reports should be brief (3-4 bullet points) and action-oriented.
 
 ### 3. Security
-- **Credentials:** MySQL password (`z236244462`) and JWT secret (`FarmerPlatformJwtSecretKeyFarmerPlatformJwtSecretKey2026`) are hardcoded for development only.
+- **Auth Integrity**: Ensure `AuthInterceptor` logic correctly separates public paths from secured paths.
+- **Credentials**: MySQL password (`z236244462`) and JWT secret are for development only.
 
 ## Development Environment
-- **Backend (API):** `8080`
-- **Frontend (Vue):** `5173`
-- **AI Agent (Node):** `3000` (provides `/api/analyze` for streaming analysis)
-- **Database:** MySQL on `localhost:3306` (`farmer_platform`)
+- **Backend (API)**: `8080` (Base URL: `http://localhost:8080/api`)
+- **Frontend (Vue)**: `5173`
+- **AI Agent (Node)**: `3000` (provides `/api/analyze` for streaming analysis)
+- **Database**: MySQL on `localhost:3306` (`farmer_platform`)
