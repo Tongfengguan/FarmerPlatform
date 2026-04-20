@@ -2,6 +2,7 @@
 import { ref, nextTick } from 'vue'
 import { Promotion, Service, User, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { sanitizeAiStream } from '@/utils/ai-helper'
 
 const question = ref('')
 const loading = ref(false)
@@ -232,31 +233,4 @@ const handleSend = async () => {
   margin: 0 0 8px;
 }
 </style>
-lor: var(--el-text-color-primary);
-  border-bottom-left-radius: 4px;
-}
 
-.user-msg .msg-bubble {
-  background-color: var(--el-color-primary);
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-
-.loading-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chat-input-area {
-  padding: 24px 30px;
-  background-color: var(--el-fill-color-blank);
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-</style>

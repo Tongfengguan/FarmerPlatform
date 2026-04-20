@@ -12,10 +12,14 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 - **Data Persistence:** Spring Data JPA with MySQL.
 - **Authentication:** Custom JWT-based authentication using `AuthInterceptor` and `JwtService`. **Fixed**: Interceptor now correctly handles OPTIONS requests and allows anonymous access to login/register/public-products.
 - **Key Packages:**
-  - `auth`: Authentication logic, JWT handling, and login/register DTOs.
   - `common`: Standard `ApiResponse<T>` and `PagedResponse<T>` wrappers.
-  - `platform`: Core business logic for Products, SKUs, Articles, Addresses, and Orders. Supports **Pagination** at the database level.
-  - `user`: User account management with optimized SQL aggregation for summaries.
+  - `config`: Security and data initialization configurations.
+  - `controller`: REST controllers for both public and administrative endpoints.
+  - `dto`: Data transfer objects organized by domain (auth, platform).
+  - `entity`: JPA entities representing the database schema.
+  - `repository`: Spring Data JPA repositories.
+  - `security`: Authentication interceptors and security logic.
+  - `service`: Core business logic for Products, Articles, Orders, and JWT management.
 
 ### Frontend (Vue.js)
 - **Framework:** Vue.js 3 (Composition API).
