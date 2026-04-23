@@ -122,6 +122,12 @@ const handleLogout = () => {
   border-radius: 14px;
   text-align: center;
   color: var(--text-soft);
+  transition: all 0.2s ease;
+}
+
+.user-nav__link:hover:not(.active) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .user-nav__link.active {

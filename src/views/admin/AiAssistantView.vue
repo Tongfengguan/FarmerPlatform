@@ -186,6 +186,10 @@ const handleSend = async () => {
   max-width: 85%;
 }
 
+.avatar {
+  flex-shrink: 0;
+}
+
 .ai-msg {
   align-self: flex-start;
 }
