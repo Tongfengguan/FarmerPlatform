@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { usePlatformStore } from '../../stores/platform'
 import { User, Location, Phone, Goods, ShoppingCart, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
