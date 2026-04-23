@@ -4,6 +4,7 @@ import com.tfgkk.farmer_platform.dto.auth.AuthResponse;
 import com.tfgkk.farmer_platform.dto.auth.LoginRequest;
 import com.tfgkk.farmer_platform.dto.auth.RegisterRequest;
 import com.tfgkk.farmer_platform.dto.auth.ResetPasswordRequest;
+import com.tfgkk.farmer_platform.dto.auth.UpdateProfileRequest;
 import com.tfgkk.farmer_platform.common.BusinessException;
 import com.tfgkk.farmer_platform.entity.UserAccount;
 import com.tfgkk.farmer_platform.repository.UserAccountRepository;
@@ -80,6 +81,28 @@ public class AuthService {
 
         userAccount.setPasswordHash(passwordEncoder.encode(normalizePassword(request.getNextPassword())));
         userAccountRepository.save(userAccount);
+    }
+
+    @Transactional
+    public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
+        UserAccount userAccount = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("User does not exist"));
+
+        String phone = normalize(request.getPhone());
+        if (!userAccount.getPhone().equals(phone) && userAccountRepository.existsByPhone(phone)) {
+            throw new BusinessException("Phone already exists");
+        }
+
+        userAccount.setPhone(phone);
+        userAccount.setNickname(normalize(request.getNickname()));
+        
+        String password = normalize(request.getPassword());
+        if (!password.isEmpty()) {
+            userAccount.setPasswordHash(passwordEncoder.encode(password));
+        }
+
+        UserAccount saved = userAccountRepository.save(userAccount);
+        return toResponse(saved, null); // Don't need to refresh token usually, but return updated info
     }
 
     @Transactional(readOnly = true)

@@ -245,6 +245,11 @@ export const usePlatformStore = defineStore('platform', {
       const addresses = await getJson('/api/platform/addresses') // Refresh addresses for simplicity and default status handling
       this.syncCurrentUser(this.currentUser, addresses)
     },
+    async updateProfile(payload) {
+      const updated = await putJson('/api/platform/profile', payload)
+      this.syncCurrentUser(updated)
+      return updated
+    },
     resetClientState() {
       this.cart = []
       this.currentUser = JSON.parse(JSON.stringify(currentUserPlaceholder))

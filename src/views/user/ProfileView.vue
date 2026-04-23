@@ -8,6 +8,34 @@ const store = usePlatformStore()
 const user = computed(() => store.currentUser)
 const addressBook = computed(() => user.value.addressBook || [])
 const defaultAddress = computed(() => addressBook.value.find((item) => item.isDefault))
+
+const showEditDialog = ref(false)
+const profileForm = reactive({
+  nickname: '',
+  phone: '',
+  password: ''
+})
+
+const openEditDialog = () => {
+  profileForm.nickname = user.value.nickname
+  profileForm.phone = user.value.phone
+  profileForm.password = ''
+  showEditDialog.value = true
+}
+
+const submitProfile = async () => {
+  if (!profileForm.nickname || !profileForm.phone) {
+    return ElMessage.warning('请填写完整的个人信息')
+  }
+  try {
+    await store.updateProfile({ ...profileForm })
+    ElMessage.success('个人信息更新成功')
+    showEditDialog.value = false
+  } catch (error) {
+    ElMessage.error(error.message || '更新失败')
+  }
+}
+
 const form = reactive({
   name: '',
   phone: '',
@@ -49,6 +77,9 @@ const submitAddress = async () => {
             <div class="user-meta">
               <span class="meta-item"><el-icon><User /></el-icon>{{ user.name }}</span>
               <span class="meta-item"><el-icon><Phone /></el-icon>{{ user.phone }}</span>
+            </div>
+            <div class="user-actions">
+              <el-button size="small" type="primary" link @click="openEditDialog">修改资料</el-button>
             </div>
           </div>
 
@@ -146,6 +177,33 @@ const submitAddress = async () => {
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 修改个人信息对话框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      title="修改个人信息"
+      width="400px"
+      class="custom-dialog"
+      align-center
+    >
+      <el-form :model="profileForm" label-position="top">
+        <el-form-item label="昵称">
+          <el-input v-model="profileForm.nickname" placeholder="请输入新昵称" />
+        </el-form-item>
+        <el-form-item label="手机号码">
+          <el-input v-model="profileForm.phone" placeholder="请输入新手机号" />
+        </el-form-item>
+        <el-form-item label="修改密码 (不改请留空)">
+          <el-input v-model="profileForm.password" type="password" placeholder="请输入新密码" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="submitProfile">保存修改</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -218,6 +276,10 @@ const submitAddress = async () => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.user-actions {
+  margin-top: 12px;
 }
 
 .user-stats {

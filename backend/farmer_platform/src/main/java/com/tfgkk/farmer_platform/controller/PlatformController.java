@@ -3,6 +3,8 @@ package com.tfgkk.farmer_platform.controller;
 import com.tfgkk.farmer_platform.security.AuthInterceptor;
 import com.tfgkk.farmer_platform.common.ApiResponse;
 import com.tfgkk.farmer_platform.common.PagedResponse;
+import com.tfgkk.farmer_platform.dto.auth.AuthResponse;
+import com.tfgkk.farmer_platform.dto.auth.UpdateProfileRequest;
 import com.tfgkk.farmer_platform.dto.platform.*;
 import com.tfgkk.farmer_platform.service.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,13 +29,16 @@ public class PlatformController {
     private final ArticleService articleService;
     private final ProductService productService;
     private final OrderService orderService;
+    private final AuthService authService;
 
     public PlatformController(PlatformService platformService, ArticleService articleService, 
-                              ProductService productService, OrderService orderService) {
+                              ProductService productService, OrderService orderService,
+                              AuthService authService) {
         this.platformService = platformService;
         this.articleService = articleService;
         this.productService = productService;
         this.orderService = orderService;
+        this.authService = authService;
     }
 
     @GetMapping("/api/platform/bootstrap")
@@ -76,6 +81,11 @@ public class PlatformController {
     @PostMapping("/api/platform/orders")
     public ApiResponse<OrderDto> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderRequest body) {
         return ApiResponse.success("Order created", orderService.createOrder(currentUserId(request), body));
+    }
+
+    @PutMapping("/api/platform/profile")
+    public ApiResponse<AuthResponse> updateProfile(HttpServletRequest request, @Valid @RequestBody UpdateProfileRequest body) {
+        return ApiResponse.success("Profile updated", authService.updateProfile(currentUserId(request), body));
     }
 
     @PatchMapping("/api/platform/orders/{orderId}/pay")
