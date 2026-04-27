@@ -90,8 +90,28 @@ const getPlatformProductsTool = tool(
   },
 )
 
-const tools = [getPlatformProductsTool]
-const modelWithTools = llm.bindTools(tools)
+const getDashboardStatsTool = tool(
+  async () => {
+    console.log(`[Tool] Fetching dashboard stats...`);
+    try {
+      const response = await apiClient.get("/platform/bootstrap");
+      if (response.data.success) {
+        return JSON.stringify(response.data.data.dashboard);
+      }
+      return "获取统计数据失败。";
+    } catch (error: any) {
+      return `连接后端失败: ${error.message}`;
+    }
+  },
+  {
+    name: "get_dashboard_stats",
+    description: "获取全站经营统计数据，包括本月销售额、待处理订单数、今日访问量和已发布文章数",
+    schema: z.object({}),
+  }
+);
+
+const tools = [getPlatformProductsTool, getDashboardStatsTool];
+const modelWithTools = llm.bindTools(tools);
 
 // --- 路由 ---
 

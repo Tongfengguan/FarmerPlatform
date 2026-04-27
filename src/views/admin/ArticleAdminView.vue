@@ -11,6 +11,7 @@ const keyword = ref('')
 const showModal = ref(false)
 const editingId = ref(null)
 const loading = ref(false)
+const submitting = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 
@@ -70,18 +71,21 @@ const openEdit = (article) => {
 }
 
 const submit = async () => {
-  const payload = { ...form, id: editingId.value }
+  const payload = { ...JSON.parse(JSON.stringify(form)), id: editingId.value }
+  submitting.value = true
   try {
     if (editingId.value) {
       await store.updateArticle(payload)
       ElMessage.success('更新成功')
     } else {
       await store.addArticle(payload)
-      ElMessage.success('发布成功')
+      ElMessage.success('添加成功')
     }
     showModal.value = false
   } catch (e) {
     ElMessage.error(e.message || '操作失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -92,14 +96,22 @@ const handleDelete = (id) => {
     type: 'warning',
     buttonSize: 'default'
   }).then(async () => {
-    await store.removeArticle(id)
-    ElMessage.success('删除成功')
-  })
+    try {
+      await store.removeArticle(id)
+      ElMessage.success('删除成功')
+    } catch (error) {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }).catch(() => {})
 }
 
 const toggleStatus = async (id) => {
-  await store.toggleArticleStatus(id)
-  ElMessage.success('状态已更新')
+  try {
+    await store.toggleArticleStatus(id)
+    ElMessage.success('状态已更新')
+  } catch (error) {
+    ElMessage.error(error.message || '操作失败')
+  }
 }
 
 onMounted(() => {
@@ -246,7 +258,7 @@ onMounted(() => {
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="showModal = false">取消</el-button>
-          <el-button type="primary" @click="submit">确认保存</el-button>
+          <el-button type="primary" @click="submit" :loading="submitting">确认保存</el-button>
         </span>
       </template>
     </el-dialog>

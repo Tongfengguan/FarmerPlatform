@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { currentUserPlaceholder, dashboardStatsPlaceholder } from '../utils/constants.js'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../utils/http.js'
+import { useAuthStore } from './auth.js'
 
 export const usePlatformStore = defineStore('platform', {
   state: () => ({
@@ -248,6 +249,10 @@ export const usePlatformStore = defineStore('platform', {
     async updateProfile(payload) {
       const updated = await putJson('/api/platform/profile', payload)
       this.syncCurrentUser(updated)
+      
+      const authStore = useAuthStore()
+      authStore.updateSession(updated)
+      
       return updated
     },
     resetClientState() {

@@ -11,6 +11,7 @@ const keyword = ref('')
 const showModal = ref(false)
 const editingId = ref(null)
 const loading = ref(false)
+const submitting = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 
@@ -78,6 +79,7 @@ const openEdit = (product) => {
 
 const submit = async () => {
   const payload = { ...JSON.parse(JSON.stringify(form)), id: editingId.value }
+  submitting.value = true
   try {
     if (editingId.value) {
       await store.updateProduct(payload)
@@ -89,12 +91,18 @@ const submit = async () => {
     showModal.value = false
   } catch (e) {
     ElMessage.error(e.message || '操作失败')
+  } finally {
+    submitting.value = false
   }
 }
 
 const toggleStatus = async (id) => {
-  await store.toggleProductStatus(id)
-  ElMessage.success('状态已更新')
+  try {
+    await store.toggleProductStatus(id)
+    ElMessage.success('状态已更新')
+  } catch (error) {
+    ElMessage.error(error.message || '操作失败')
+  }
 }
 
 onMounted(() => {
@@ -271,7 +279,7 @@ onMounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="showModal = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存并上架</el-button>
+        <el-button type="primary" @click="submit" :loading="submitting">保存并上架</el-button>
       </template>
     </el-dialog>
   </div>

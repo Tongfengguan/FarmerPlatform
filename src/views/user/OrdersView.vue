@@ -22,8 +22,12 @@ const getStatusType = (status) => {
 }
 
 const handlePay = async (orderId) => {
-  await store.payOrder(orderId)
-  ElMessage.success('支付成功，等待商家发货')
+  try {
+    await store.payOrder(orderId)
+    ElMessage.success('支付成功，等待商家发货')
+  } catch (error) {
+    ElMessage.error(error.message || '支付失败')
+  }
 }
 
 const handleCancel = (orderId) => {
@@ -32,9 +36,13 @@ const handleCancel = (orderId) => {
     cancelButtonText: '暂不',
     type: 'warning',
   }).then(async () => {
-    await store.cancelOrder(orderId)
-    ElMessage.success('订单已取消')
-  })
+    try {
+      await store.cancelOrder(orderId)
+      ElMessage.success('订单已取消')
+    } catch (error) {
+      ElMessage.error(error.message || '取消失败')
+    }
+  }).catch(() => {})
 }
 
 const handleConfirm = (orderId) => {
@@ -43,9 +51,21 @@ const handleConfirm = (orderId) => {
     cancelButtonText: '取消',
     type: 'success',
   }).then(async () => {
-    await store.confirmOrder(orderId)
-    ElMessage.success('交易完成，感谢您的购买')
-  })
+    try {
+      await store.confirmOrder(orderId)
+      ElMessage.success('交易完成，感谢您的购买')
+    } catch (error) {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }).catch(() => {})
+}
+
+const showDetail = ref(false)
+const selectedOrder = ref(null)
+
+const handleDetail = (order) => {
+  selectedOrder.value = order
+  showDetail.value = true
 }
 </script>
 
@@ -57,11 +77,9 @@ const handleConfirm = (orderId) => {
     </div>
 
     <el-card shadow="never" class="filter-card">
-      <div class="status-tabs">
-        <el-radio-group v-model="status" size="large">
-          <el-radio-button v-for="item in orderStatuses" :key="item" :label="item" :value="item" />
-        </el-radio-group>
-      </div>
+      <el-radio-group v-model="status" size="large">
+        <el-radio-button v-for="item in orderStatuses" :key="item" :label="item" :value="item" />
+      </el-radio-group>
     </el-card>
 
     <div class="orders-list">
@@ -132,9 +150,9 @@ const handleConfirm = (orderId) => {
                   确认收货
                 </el-button>
                 <el-button 
-                  v-if="order.status === '已完成' || order.status === '已取消'" 
                   plain 
                   :icon="InfoFilled"
+                  @click="handleDetail(order)"
                 >
                   订单详情
                 </el-button>
@@ -144,14 +162,58 @@ const handleConfirm = (orderId) => {
         </el-card>
       </template>
 
-      <el-empty 
-        v-else 
-        description="当前状态下暂无订单记录" 
-        :image-size="200"
-      >
+      <el-empty v-else description="暂无订单记录" :image-size="200">
         <el-button type="primary" @click="$router.push('/mall')">去逛逛</el-button>
       </el-empty>
     </div>
+
+    <!-- 详情侧边栏 -->
+    <el-drawer
+      v-model="showDetail"
+      title="订单详情"
+      size="500px"
+      destroy-on-close
+    >
+      <div v-if="selectedOrder" class="drawer-inner">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="订单编号">{{ selectedOrder.id }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ selectedOrder.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="当前状态">
+            <el-tag :type="getStatusType(selectedOrder.status)">{{ selectedOrder.status }}</el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <h3 class="drawer-title">收货人信息</h3>
+        <el-descriptions :column="1" border v-if="selectedOrder.receiver">
+          <el-descriptions-item label="收货人">{{ selectedOrder.receiver?.name || '未知' }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ selectedOrder.receiver?.phone || '未知' }}</el-descriptions-item>
+          <el-descriptions-item label="收货地址">{{ selectedOrder.receiver?.address || '未知' }}</el-descriptions-item>
+        </el-descriptions>
+        <el-empty v-else description="暂无收货地址数据" :image-size="60" />
+
+        <h3 class="drawer-title">商品清单</h3>
+        <!-- 使用可选链确保 items 存在 -->
+        <el-table :data="selectedOrder.items || []" border stripe size="small">
+          <el-table-column prop="name" label="商品名称" />
+          <el-table-column prop="sku" label="规格" width="100" />
+          <el-table-column label="单价/数量" width="120">
+            <template #default="{ row }">
+              ¥{{ row.price }} x {{ row.quantity }}
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="drawer-footer-box">
+          <div class="footer-line">
+            <span>实付总额</span>
+            <span class="total-price">¥{{ selectedOrder.payAmount }}</span>
+          </div>
+          <div v-if="selectedOrder.shipNo" class="ship-info-box">
+            <p><strong>物流信息：</strong>{{ selectedOrder.shipCompany }} [{{ selectedOrder.shipNo }}]</p>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -178,10 +240,8 @@ const handleConfirm = (orderId) => {
 }
 
 .filter-card {
-  border: none;
-  background: var(--el-bg-color-overlay);
   margin-bottom: 24px;
-  padding: 16px 20px;
+  border: none;
 }
 
 .orders-list {
@@ -192,63 +252,43 @@ const handleConfirm = (orderId) => {
 
 .order-card {
   border: none;
-  background: var(--el-bg-color-overlay);
 }
 
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  background-color: var(--el-fill-color-darker);
+  padding: 14px 20px;
+  background-color: var(--el-fill-color-light);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .order-meta {
   display: flex;
-  gap: 24px;
-  align-items: center;
+  gap: 20px;
   font-size: 13px;
   color: var(--el-text-color-regular);
 }
 
-.order-id {
-  font-weight: 500;
-}
-
-.order-date {
-  color: var(--el-text-color-secondary);
-}
-
 .order-body {
   padding: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .order-items {
-  display: flex;
-  flex-direction: column;
-  padding: 0 24px;
+  padding: 0 20px;
 }
 
 .order-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.item-main {
-  flex: 1;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
 }
 
 .item-name {
   font-weight: 600;
-  font-size: 15px;
-  color: var(--el-text-color-primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .item-sku {
@@ -258,45 +298,66 @@ const handleConfirm = (orderId) => {
 
 .item-price-qty {
   text-align: right;
-  min-width: 120px;
 }
 
 .item-price {
   font-weight: 600;
-  font-size: 15px;
   display: block;
-  margin-bottom: 4px;
-}
-
-.item-qty {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
 }
 
 .order-summary-action {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  background-color: var(--el-fill-color-blank);
+  padding: 16px 20px;
+  background-color: var(--el-bg-color);
 }
 
-.order-total {
-  font-size: 14px;
-}
-
-.order-total .label {
-  color: var(--el-text-color-regular);
-}
-
-.order-total .amount {
-  font-size: 24px;
+.amount {
+  font-size: 22px;
   font-weight: 700;
   color: var(--el-color-danger);
 }
 
 .order-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+}
+
+/* 抽屉样式 */
+.drawer-inner {
+  padding: 0 10px;
+}
+
+.drawer-title {
+  margin: 24px 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.drawer-footer-box {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: var(--el-fill-color-light);
+  border-radius: 8px;
+}
+
+.footer-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-price {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-color-danger);
+}
+
+.ship-info-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  font-size: 14px;
 }
 </style>

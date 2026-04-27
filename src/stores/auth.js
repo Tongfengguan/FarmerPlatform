@@ -81,6 +81,14 @@ export const useAuthStore = defineStore('auth', {
 
       platformStore.syncCurrentUser(accountInfo, existingAddressBook)
     },
+    updateSession(updatedInfo) {
+      this.session = {
+        ...this.session,
+        nickname: updatedInfo.nickname || this.session.nickname,
+        phone: updatedInfo.phone || this.session.phone,
+      }
+      this.persistSession()
+    },
     async login({ account, password, remember = true }) {
       const data = await postJson('/api/auth/login', {
         account: account.trim(),

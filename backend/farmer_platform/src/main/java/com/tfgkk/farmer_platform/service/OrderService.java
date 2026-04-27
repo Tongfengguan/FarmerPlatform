@@ -166,7 +166,7 @@ public class OrderService {
         return userAccountRepository.findById(userId).orElseThrow(() -> new BusinessException("User not found"));
     }
 
-    private OrderDto toOrderDto(OrderEntity order) {
+    public OrderDto toOrderDto(OrderEntity order) {
         return new OrderDto(
                 order.getId(),
                 order.getUser().getId(),

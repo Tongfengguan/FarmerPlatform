@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlatformStore } from '../../stores/platform'
 import { Delete, ShoppingCart, Warning } from '@element-plus/icons-vue'
@@ -7,18 +7,27 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const store = usePlatformStore()
 const router = useRouter()
+const processing = ref(false)
 
 const selectedTotal = computed(() =>
   store.cart.reduce((sum, item) => (item.selected ? sum + item.price * item.quantity : sum), 0),
 )
 
 const handleCheckout = async () => {
-  const success = await store.checkoutSelected()
-  if (success) {
-    ElMessage.success('结算成功，订单已生成')
-    router.push('/orders')
-  } else {
-    ElMessage.warning('请先选择要结算的商品')
+  if (processing.value) return
+  processing.value = true
+  try {
+    const success = await store.checkoutSelected()
+    if (success) {
+      ElMessage.success('结算成功，订单已生成')
+      router.push('/orders')
+    } else {
+      ElMessage.warning('请先选择要结算的商品')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '结算失败，请重试')
+  } finally {
+    processing.value = false
   }
 }
 
@@ -120,6 +129,7 @@ const handleRemove = (productId, sku) => {
               class="checkout-btn" 
               :icon="ShoppingCart"
               :disabled="!store.cart.some(item => item.selected)"
+              :loading="processing"
               @click="handleCheckout"
             >
               提交订单

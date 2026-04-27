@@ -60,7 +60,7 @@ public class PlatformService {
                 articleRepository.findAll(recentPage).stream().map(articleService::toArticleDto).toList(),
                 productRepository.findAll(recentPage).stream().map(productService::toProductDto).toList(),
                 listUsers(),
-                orderRepository.findAll(orderPage).stream().map(this::toOrderDtoPlaceholder).toList());
+                orderRepository.findAll(orderPage).stream().map(orderService::toOrderDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -90,25 +90,20 @@ public class PlatformService {
     }
 
     private DashboardDto buildDashboard() {
-        int pendingOrders = (int) orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(order -> "待付款".equals(order.getStatus()) || "待发货".equals(order.getStatus())).count();
-        int salesMonth = orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(order -> !"已取消".equals(order.getStatus())).mapToInt(OrderEntity::getPayAmount).sum();
-        int publishedArticles = (int) articleRepository.findAll().stream()
-                .filter(article -> "已发布".equals(article.getStatus())).count();
-        return new DashboardDto(2841, salesMonth, pendingOrders, publishedArticles);
+        long pendingOrders = orderRepository.countByStatusIn(List.of("待付款", "待发货"));
+        
+        Integer salesSum = orderRepository.calculateMonthlySales();
+        int salesMonth = salesSum != null ? salesSum : 0;
+        
+        long publishedArticles = articleRepository.countByStatus("已发布");
+        
+        // 模拟一个动态的访问量（实际项目中应由 Redis 或埋点表统计）
+        int visitToday = 1200 + (int)(orderRepository.count() * 5); 
+        
+        return new DashboardDto(visitToday, salesMonth, (int)pendingOrders, (int)publishedArticles);
     }
 
     private UserAccount requireUser(Long userId) {
         return userAccountRepository.findById(userId).orElseThrow(() -> new BusinessException("User not found"));
-    }
-
-    // 辅助转换方法，用于 Bootstrap
-    private OrderDto toOrderDtoPlaceholder(OrderEntity order) {
-        return new OrderDto(
-                order.getId(), order.getUser().getId(), order.getBuyer(), order.getPhone(),
-                List.of(), order.getPayAmount(), order.getFreightAmount(),
-                order.getStatus(), order.getCreatedAt().toString(), "", "", null
-        );
     }
 }

@@ -42,9 +42,13 @@ const handleToggleStatus = (user) => {
     cancelButtonText: '取消',
     type: user.status === '正常' ? 'warning' : 'info'
   }).then(async () => {
-    await store.toggleUserStatus(user.id)
-    ElMessage.success(`用户已${action}`)
-  })
+    try {
+      await store.toggleUserStatus(user.id)
+      ElMessage.success(`用户已${action}`)
+    } catch (error) {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }).catch(() => {})
 }
 </script>
 
