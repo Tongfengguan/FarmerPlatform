@@ -100,7 +100,15 @@ const handleLogout = () => {
             </div>
           </div>
 
-          <div class="header-right">
+          
+            <div class="header-right">
+              <el-link 
+                href="https://tongfengguan.github.io/farmerplatformdocs/" 
+                target="_blank" 
+                style="margin-right: 20px; font-size: 14px;"
+              >
+                寮€鍙戞枃妗?
+              </el-link>
             <el-button round :icon="Monitor" @click="router.push('/')">返回前台</el-button>
           </div>
         </div>

@@ -29,10 +29,11 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 
 ### AI Agent Service (DeepSeek)
 - **Framework:** LangChain (Python/FastAPI).
-- **Architecture**: **Safe Summary Mode**. 
-  - **Step 1**: Identify tool call and fetch raw data from backend.
-  - **Step 2**: Discard complex protocol history and initiate a clean summary context to prevent `<ï½œDSMLï½œ>` tag leakage.
-- **Capabilities**: Concise business analysis (max 200 words), direct concluding points, and tool calling via backend API.
+- **Architecture**: **Safe Summary Mode**.
+  - **Step 1**: Identify tool call and fetch raw data from backend via httpx.
+  - **Step 2**: Discard complex protocol history and initiate a clean summary context.
+- **Capabilities**: Modular tools for Products, Orders, Articles, etc. Streaming SSE response.
+- **Context Management**: ContextVar for JWT propagation across async calls.
 
 ## Core Mandates & Conventions
 
@@ -106,15 +107,15 @@ The test: Every changed line should trace directly to the user's request.
 **Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
-- "Add validation" â†’ "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" â†’ "Write a test that reproduces it, then make it pass"
-- "Refactor X" â†’ "Ensure tests pass before and after"
+- "Add validation" â†?"Write tests for invalid inputs, then make them pass"
+- "Fix the bug" â†?"Write a test that reproduces it, then make it pass"
+- "Refactor X" â†?"Ensure tests pass before and after"
 
 For multi-step tasks, state a brief plan:
 ```
-1. [Step] â†’ verify: [check]
-2. [Step] â†’ verify: [check]
-3. [Step] â†’ verify: [check]
+1. [Step] â†?verify: [check]
+2. [Step] â†?verify: [check]
+3. [Step] â†?verify: [check]
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
