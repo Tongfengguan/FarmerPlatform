@@ -13,7 +13,8 @@ import {
   Expand,
   ArrowDown,
   Monitor,
-  SwitchButton
+  SwitchButton,
+  Setting
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -39,78 +40,79 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <el-container class="admin-shell">
-    <!-- 侧边栏 -->
-    <el-aside :width="isCollapse ? '64px' : '240px'" class="admin-aside">
-      <div class="admin-brand">
-        <div class="brand-logo"></div>
-        <span v-if="!isCollapse" class="brand-text">智慧三农</span>
+  <el-container class="admin-layout">
+    <!-- Floating Sidebar -->
+    <el-aside :width="isCollapse ? '80px' : '260px'" class="admin-aside">
+      <div class="aside-inner">
+        <div class="brand-section">
+          <div class="brand-logo">
+            <el-icon color="#fff" :size="20"><Setting /></el-icon>
+          </div>
+          <span v-if="!isCollapse" class="brand-name">智慧三农</span>
+        </div>
+        
+        <el-scrollbar>
+          <el-menu
+            :default-active="activeMenu"
+            :collapse="isCollapse"
+            router
+            class="admin-menu"
+          >
+            <el-menu-item v-for="item in adminNav" :key="item.to" :index="item.to">
+              <el-icon><component :is="item.icon" /></el-icon>
+              <template #title>
+                <span class="menu-label">{{ item.label }}</span>
+              </template>
+            </el-menu-item>
+          </el-menu>
+        </el-scrollbar>
+
+        <div class="aside-footer" v-if="!isCollapse">
+          <div class="user-card" @click="handleLogout">
+            <el-avatar :size="32" class="avatar-green">{{ authStore.accountName?.slice(0, 1) || '管' }}</el-avatar>
+            <div class="user-info">
+              <div class="name">{{ authStore.accountName || '管理员' }}</div>
+              <div class="role">退出系统</div>
+            </div>
+            <el-icon><SwitchButton /></el-icon>
+          </div>
+        </div>
       </div>
-      
-      <el-scrollbar>
-        <el-menu
-          :default-active="activeMenu"
-          :collapse="isCollapse"
-          router
-          class="admin-menu"
-          background-color="transparent"
-          text-color="var(--el-text-color-regular)"
-          active-text-color="var(--el-color-primary)"
-        >
-          <el-menu-item v-for="item in adminNav" :key="item.to" :index="item.to">
-            <el-icon><component :is="item.icon" /></el-icon>
-            <template #title>{{ item.label }}</template>
-          </el-menu-item>
-        </el-menu>
-      </el-scrollbar>
     </el-aside>
 
-    <el-container class="main-container">
-      <!-- 顶部栏 -->
+    <el-container class="content-container">
+      <!-- Island Header -->
       <el-header class="admin-header">
-        <div class="header-left">
-          <el-button 
-            type="primary" 
-            link 
-            class="collapse-btn" 
-            @click="isCollapse = !isCollapse"
-          >
-            <el-icon :size="20">
-              <component :is="isCollapse ? Expand : Fold" />
-            </el-icon>
-          </el-button>
-          
-          <el-breadcrumb separator="/" class="breadcrumb">
-            <el-breadcrumb-item :to="{ path: '/admin' }">管理后台</el-breadcrumb-item>
-            <el-breadcrumb-item>{{ adminNav.find(n => n.to === route.path)?.label || '当前页面' }}</el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-
-        <div class="header-right">
-          <el-button link :icon="Monitor" @click="router.push('/')">预览前台</el-button>
-          
-          <el-divider direction="vertical" />
-          
-          <el-dropdown trigger="click">
-            <div class="user-profile">
-              <el-avatar :size="28" class="user-avatar">{{ authStore.accountName?.slice(0, 1) || '管' }}</el-avatar>
-              <span class="user-name">{{ authStore.accountName || '管理员' }}</span>
-              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+        <div class="header-inner">
+          <div class="header-left">
+            <el-button 
+              circle
+              class="toggle-btn" 
+              @click="isCollapse = !isCollapse"
+            >
+              <el-icon>
+                <component :is="isCollapse ? Expand : Fold" />
+              </el-icon>
+            </el-button>
+            
+            <div class="page-title">
+              {{ adminNav.find(n => n.to === route.path)?.label || '管理中心' }}
             </div>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item :icon="UserIcon">个人中心</el-dropdown-item>
-                <el-dropdown-item divided :icon="SwitchButton" @click="handleLogout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          </div>
+
+          <div class="header-right">
+            <el-button round :icon="Monitor" @click="router.push('/')">返回前台</el-button>
+          </div>
         </div>
       </el-header>
 
-      <!-- 内容区 -->
       <el-main class="admin-main">
-        <div class="content-wrapper">
-          <RouterView />
+        <div class="view-wrapper">
+          <RouterView v-slot="{ Component }">
+            <transition name="fade-transform" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </RouterView>
         </div>
       </el-main>
     </el-container>
@@ -118,121 +120,181 @@ const handleLogout = () => {
 </template>
 
 <style scoped>
-.admin-shell {
+.admin-layout {
   height: 100vh;
-  background-color: var(--el-bg-color);
+  background-color: var(--color-background);
+  padding: 16px;
+  gap: 16px;
 }
 
 .admin-aside {
-  background-color: var(--el-bg-color-overlay);
-  border-right: 1px solid var(--el-border-color-lighter);
-  transition: width 0.3s;
-  display: flex;
-  flex-direction: column;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
-.admin-brand {
-  height: 60px;
+.aside-inner {
+  height: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-line);
+}
+
+.brand-section {
+  padding: 24px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
   gap: 12px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .brand-logo {
-  width: 24px;
-  height: 24px;
-  background-color: var(--el-color-primary);
-  border-radius: 6px;
-  box-shadow: 0 0 12px var(--el-color-primary-light-5);
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
 }
 
-.brand-text {
+.brand-name {
   font-size: 18px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-  letter-spacing: 1px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.5px;
 }
 
 .admin-menu {
-  border-right: none;
-  padding: 10px 0;
+  border: none;
+  background: transparent;
+  padding: 0 12px;
 }
 
 .admin-menu :deep(.el-menu-item) {
-  margin: 4px 12px;
-  border-radius: 8px;
-  height: 50px;
-  line-height: 50px;
+  height: 54px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  color: var(--color-text-soft);
+  transition: all 0.3s ease;
+}
+
+.admin-menu :deep(.el-menu-item:hover) {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
 }
 
 .admin-menu :deep(.el-menu-item.is-active) {
-  background-color: var(--el-color-primary-light-9);
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.3);
+}
+
+.menu-label {
+  font-weight: 600;
+}
+
+.aside-footer {
+  padding: 16px;
+  border-top: 1px solid var(--color-line);
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-card:hover {
+  background: var(--color-line);
+}
+
+.avatar-green {
+  background-color: var(--color-primary);
+  font-weight: bold;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-info .name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.user-info .role {
+  font-size: 12px;
+  color: var(--color-text-mute);
+}
+
+.content-container {
+  flex-direction: column;
 }
 
 .admin-header {
-  background-color: var(--el-bg-color-overlay);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  height: 80px !important;
+  padding: 0;
+}
+
+.header-inner {
+  height: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-line);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
-}
-
-.collapse-btn {
-  padding: 8px;
-  font-size: 20px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
   gap: 16px;
 }
 
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background-color 0.3s;
+.toggle-btn {
+  border: 1px solid var(--color-line);
+  background: var(--color-background);
 }
 
-.user-profile:hover {
-  background-color: var(--el-fill-color-light);
-}
-
-.user-avatar {
-  background-color: var(--el-color-primary);
-  font-weight: bold;
-}
-
-.user-name {
-  font-size: 14px;
-  color: var(--el-text-color-regular);
+.page-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 .admin-main {
-  background-color: var(--el-bg-color);
-  padding: 24px;
+  padding: 16px 0 0 0;
 }
 
-.content-wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
+.view-wrapper {
+  height: 100%;
+  overflow: auto;
 }
 
-/* 菜单折叠时的文字隐藏动画 */
-.el-menu--collapse {
-  width: 64px;
+/* Transitions */
+.fade-transform-enter-active,
+.fade-transform-leave-active {
+  transition: all 0.3s;
+}
+
+.fade-transform-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
 }
 </style>

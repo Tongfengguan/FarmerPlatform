@@ -105,164 +105,269 @@ const handleResetPassword = async () => {
 
 <template>
   <div class="auth-page">
+    <!-- Floating Background Elements -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    
     <div class="auth-card">
-      <div class="auth-logo"></div>
-      <h1>智慧三农平台</h1>
+      <div class="auth-header">
+        <div class="auth-logo">
+          <div class="logo-leaf"></div>
+        </div>
+        <h1>智慧三农</h1>
+        <p class="subtitle">Connecting the Soil to the Soul</p>
+      </div>
 
       <div class="auth-tabs">
-        <button :class="{ active: tab === 'login' }" @click="tab = 'login'">密码登陆</button>
+        <button :class="{ active: tab === 'login' }" @click="tab = 'login'">密码登录</button>
         <button :class="{ active: tab === 'register' }" @click="tab = 'register'">
-          注册/快捷登陆
+          快速注册
         </button>
+        <div class="tab-indicator" :class="{ right: tab === 'register' }"></div>
       </div>
 
       <div v-if="tab === 'login'" class="auth-panel">
-        <input
-          v-model="loginForm.account"
-          class="auth-input"
-          placeholder="请输入账号（张大农 / tfgkk）"
-        />
-        <input
-          v-model="loginForm.password"
-          class="auth-input"
-          type="password"
-          placeholder="请输入密码"
-        />
+        <div class="input-group">
+          <label>账号</label>
+          <input
+            v-model="loginForm.account"
+            class="auth-input"
+            placeholder="张大农 / tfgkk"
+          />
+        </div>
+        <div class="input-group">
+          <label>密码</label>
+          <input
+            v-model="loginForm.password"
+            class="auth-input"
+            type="password"
+            placeholder="请输入您的密码"
+          />
+        </div>
 
         <div class="auth-meta">
           <label class="remember">
             <input v-model="loginForm.remember" type="checkbox" />
-            <span>记住我</span>
+            <span>记住我的登录状态</span>
           </label>
           <button class="link-btn" type="button" @click="forgotVisible = true">忘记密码？</button>
         </div>
 
         <button class="submit-btn" :disabled="loading" @click="handleLogin">
-          {{ loading ? '登录中...' : '登录' }}
+          {{ loading ? '验证中...' : '立即登录' }}
         </button>
       </div>
 
       <div v-else class="auth-panel">
-        <input v-model="registerForm.account" class="auth-input" placeholder="请输入注册账号" />
-        <input v-model="registerForm.phone" class="auth-input" placeholder="请输入手机号" />
-
-        <div class="auth-code-row">
-          <input v-model="registerForm.code" class="auth-input" placeholder="请输入短信验证码" />
-          <button class="code-btn" type="button">验证码 {{ registerCode }}</button>
+        <div class="input-group">
+          <label>用户账号</label>
+          <input v-model="registerForm.account" class="auth-input" placeholder="设置您的登录账号" />
+        </div>
+        <div class="input-group">
+          <label>手机号码</label>
+          <input v-model="registerForm.phone" class="auth-input" placeholder="用于接收通知" />
         </div>
 
-        <input
-          v-model="registerForm.password"
-          class="auth-input"
-          type="password"
-          placeholder="请设置登录密码（可选）"
-        />
+        <div class="input-group">
+          <label>验证码</label>
+          <div class="auth-code-row">
+            <input v-model="registerForm.code" class="auth-input" placeholder="输入右侧码" />
+            <button class="code-btn" type="button">码：{{ registerCode }}</button>
+          </div>
+        </div>
 
-        <label class="remember">
-          <input v-model="registerForm.remember" type="checkbox" />
-          <span>记住我</span>
-        </label>
+        <div class="input-group">
+          <label>登录密码</label>
+          <input
+            v-model="registerForm.password"
+            class="auth-input"
+            type="password"
+            placeholder="设置您的访问密码"
+          />
+        </div>
 
         <button class="submit-btn" :disabled="loading" @click="handleRegister">
-          {{ loading ? '提交中...' : '注册并登录' }}
+          {{ loading ? '处理中...' : '注册并登录' }}
         </button>
       </div>
 
       <div class="auth-footer">
-        <div>内置账号：user 张大农，admin tfgkk</div>
-        <div>默认密码：123456</div>
+        <div class="test-account-pill">
+          <strong>测试账号：</strong> user: 张大农 / admin: tfgkk
+        </div>
+        <div class="copyright">© 2024 Farmer Platform UI/UX Redesign</div>
       </div>
 
-      <p v-if="errorMessage" class="message error">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="message success">{{ successMessage }}</p>
+      <transition name="fade">
+        <p v-if="errorMessage" class="message error">{{ errorMessage }}</p>
+      </transition>
+      <transition name="fade">
+        <p v-if="successMessage" class="message success">{{ successMessage }}</p>
+      </transition>
     </div>
 
-    <div v-if="forgotVisible" class="modal-mask" @click.self="forgotVisible = false">
-      <div class="forgot-card">
-        <h2>忘记密码</h2>
-        <p class="modal-tip">输入账号、手机号和验证码后即可重置密码。</p>
-        <div class="auth-panel">
-          <input v-model="forgotForm.account" class="auth-input" placeholder="请输入账号" />
-          <input v-model="forgotForm.phone" class="auth-input" placeholder="请输入手机号" />
+    <!-- Modal for forgot password -->
+    <transition name="scale">
+      <div v-if="forgotVisible" class="modal-mask" @click.self="forgotVisible = false">
+        <div class="forgot-card">
+          <div class="modal-header">
+            <h2>重置密码</h2>
+            <p>输入信息以找回您的账号访问权限</p>
+          </div>
+          <div class="auth-panel">
+            <input v-model="forgotForm.account" class="auth-input" placeholder="请输入您的账号" />
+            <input v-model="forgotForm.phone" class="auth-input" placeholder="绑定手机号" />
 
-          <div class="auth-code-row">
-            <input v-model="forgotForm.code" class="auth-input" placeholder="请输入短信验证码" />
-            <button class="code-btn" type="button">验证码 {{ forgotCode }}</button>
+            <div class="auth-code-row">
+              <input v-model="forgotForm.code" class="auth-input" placeholder="验证码" />
+              <button class="code-btn" type="button">{{ forgotCode }}</button>
+            </div>
+
+            <input
+              v-model="forgotForm.nextPassword"
+              class="auth-input"
+              type="password"
+              placeholder="新密码"
+            />
           </div>
 
-          <input
-            v-model="forgotForm.nextPassword"
-            class="auth-input"
-            type="password"
-            placeholder="请输入新密码（至少 6 位）"
-          />
-        </div>
-
-        <div class="forgot-actions">
-          <button class="ghost-btn" type="button" @click="forgotVisible = false">取消</button>
-          <button class="submit-btn compact" :disabled="loading" type="button" @click="handleResetPassword">
-            {{ loading ? '提交中...' : '确认重置' }}
-          </button>
+          <div class="forgot-actions">
+            <button class="ghost-btn" type="button" @click="forgotVisible = false">取消</button>
+            <button class="submit-btn compact" :disabled="loading" type="button" @click="handleResetPassword">
+              确认重置
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
 .auth-page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at top left, rgba(35, 176, 125, 0.1), transparent 34%), #163e30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background);
+  position: relative;
+  overflow: hidden;
   padding: 24px;
 }
 
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(16, 185, 129, 0.15);
+  top: -100px;
+  left: -100px;
+}
+
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: rgba(245, 158, 11, 0.1);
+  bottom: -150px;
+  right: -100px;
+}
+
 .auth-card {
-  width: min(100%, 520px);
-  padding: 42px 34px 28px;
-  border: 1px solid rgba(240, 246, 244, 0.35);
-  border-radius: 18px;
-  background: rgba(2, 10, 7, 0.94);
-  box-shadow: 0 24px 40px rgba(0, 0, 0, 0.24);
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: 48px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-line);
+  position: relative;
+  z-index: 10;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 40px;
 }
 
 .auth-logo {
-  width: 62px;
-  height: 62px;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border-radius: 20px;
   margin: 0 auto 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #27b184 0%, #239d76 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.4);
 }
 
-.auth-card h1 {
-  margin: 0 0 28px;
-  text-align: center;
-  color: #1fbb8a;
+.logo-leaf {
+  width: 32px;
+  height: 32px;
+  background: white;
+  mask: radial-gradient(circle at 0 100%, transparent 40%, black 40%);
+  border-radius: 0 20px 0 20px;
+}
+
+.auth-header h1 {
   font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--color-text-mute);
+  font-size: 14px;
   font-weight: 500;
 }
 
 .auth-tabs {
   display: flex;
-  gap: 22px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(240, 246, 244, 0.3);
-  margin-bottom: 28px;
+  background: var(--color-line);
+  padding: 6px;
+  border-radius: 16px;
+  margin-bottom: 32px;
+  position: relative;
 }
 
 .auth-tabs button {
+  flex: 1;
+  border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.54);
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-soft);
   cursor: pointer;
-  padding: 0;
-  font-size: 18px;
-  font-weight: 600;
+  z-index: 1;
+  transition: color 0.3s;
 }
 
 .auth-tabs button.active {
-  color: #fff;
+  color: var(--color-primary-dark);
+}
+
+.tab-indicator {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: calc(50% - 6px);
+  height: calc(100% - 12px);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-indicator.right {
+  transform: translateX(100%);
 }
 
 .auth-panel {
@@ -270,78 +375,79 @@ const handleResetPassword = async () => {
   gap: 20px;
 }
 
-.auth-input {
-  width: 100%;
-  height: 54px;
-  padding: 0 18px;
-  border: 1px solid rgba(240, 246, 244, 0.35);
-  border-radius: 14px;
-  background: transparent;
-  color: #ffffff;
-  outline: none;
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  margin-bottom: 8px;
+  margin-left: 4px;
 }
 
-.auth-input::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+.auth-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 18px;
+  border: 2px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s;
 }
 
 .auth-input:focus {
-  border-color: #20b485;
+  border-color: var(--color-primary);
+  background: white;
+  box-shadow: 0 0 0 4px var(--color-primary-light);
 }
 
-.auth-meta,
-.remember {
+.auth-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 14px;
 }
 
 .remember {
-  justify-content: flex-start;
+  display: flex;
+  align-items: center;
   gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-soft);
+  cursor: pointer;
 }
 
 .link-btn {
   background: transparent;
-  color: #20b485;
-  cursor: pointer;
-  padding: 0;
-  font-size: 14px;
-}
-
-.submit-btn,
-.code-btn,
-.ghost-btn {
-  border: 0;
+  border: none;
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  font-size: 13px;
   cursor: pointer;
 }
 
 .submit-btn {
-  height: 64px;
-  border-radius: 14px;
-  background: #27a67d;
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 700;
+  height: 56px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
 }
 
 .submit-btn:hover {
-  background: #22956f;
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
 }
 
-.submit-btn:disabled,
-.ghost-btn:disabled,
-.code-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.compact {
-  height: 50px;
-  min-width: 160px;
-  font-size: 18px;
+.submit-btn:disabled {
+  opacity: 0.6;
+  transform: none;
 }
 
 .auth-code-row {
@@ -351,72 +457,112 @@ const handleResetPassword = async () => {
 }
 
 .code-btn {
-  min-width: 132px;
-  padding: 0 18px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #20b485;
-  font-weight: 700;
+  height: 52px;
+  padding: 0 20px;
+  background: var(--color-secondary-light);
+  color: var(--color-secondary);
+  border: none;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: default;
 }
 
 .auth-footer {
-  margin-top: 24px;
-  color: rgba(255, 255, 255, 0.45);
-  line-height: 1.8;
-  font-size: 13px;
+  margin-top: 32px;
+  text-align: center;
+}
+
+.test-account-pill {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--color-line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--color-text-soft);
+  margin-bottom: 12px;
+}
+
+.copyright {
+  font-size: 12px;
+  color: var(--color-text-mute);
 }
 
 .message {
-  margin: 16px 0 0;
+  text-align: center;
+  margin-top: 16px;
   font-size: 14px;
+  font-weight: 600;
 }
 
-.message.error {
-  color: #ff9d9d;
-}
+.message.error { color: var(--color-danger); }
+.message.success { color: var(--color-success); }
 
-.message.success {
-  color: #8bf0c8;
-}
-
+/* Modal */
 .modal-mask {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.54);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
   padding: 24px;
 }
 
 .forgot-card {
-  width: min(100%, 520px);
-  padding: 28px;
-  border-radius: 18px;
-  background: rgba(2, 10, 7, 0.98);
-  border: 1px solid rgba(240, 246, 244, 0.35);
+  width: 100%;
+  max-width: 440px;
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: var(--shadow-xl);
 }
 
-.forgot-card h2 {
-  margin: 0 0 8px;
+.modal-header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
-.modal-tip {
-  margin: 0 0 22px;
-  color: rgba(255, 255, 255, 0.55);
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.modal-header p {
+  font-size: 14px;
+  color: var(--color-text-mute);
 }
 
 .forgot-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
 }
 
 .ghost-btn {
-  min-width: 100px;
+  flex: 1;
   height: 50px;
+  background: var(--color-line);
+  border: none;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  cursor: pointer;
 }
+
+.compact {
+  flex: 2;
+  height: 50px;
+}
+
+/* Animations */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.scale-enter-active, .scale-leave-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.scale-enter-from { opacity: 0; transform: scale(0.9); }
+.scale-leave-to { opacity: 0; transform: scale(0.95); }
 </style>

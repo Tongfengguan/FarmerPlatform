@@ -28,7 +28,7 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 - **Business Logic**: **Strictly real-data driven**. Mock data (`mockData.js`) has been completely removed. Business categories and statuses are centralized in `src/utils/constants.js`.
 
 ### AI Agent Service (DeepSeek)
-- **Framework:** LangChain (Node.js/TypeScript).
+- **Framework:** LangChain (Python/FastAPI).
 - **Architecture**: **Safe Summary Mode**. 
   - **Step 1**: Identify tool call and fetch raw data from backend.
   - **Step 2**: Discard complex protocol history and initiate a clean summary context to prevent `<｜DSML｜>` tag leakage.
@@ -40,7 +40,7 @@ Farmer Platform is a full-stack application designed to facilitate interactions 
 - **No Mock Data**: Do not introduce mock data files. All views must fetch data from the Spring Boot API.
 - **Surgical Updates**: Adhere strictly to existing patterns.
 - **Pagination First**: Always use `Pageable` for list-based API endpoints.
-- **Safe AI Response**: Maintain the multi-stage regex filtering in both `index.ts` (backend) and `AiAssistantView.vue` (frontend) to ensure pure text output.
+- **Safe AI Response**: Maintain the multi-stage regex filtering in both `main.py` (backend) and `AiAssistantView.vue` (frontend) to ensure pure text output.
 
 ### 2. UI/UX Standards
 - **Element Plus**: Prefer Element Plus components.
@@ -118,3 +118,4 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+ation.

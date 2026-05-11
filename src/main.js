@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import 'element-plus/dist/index.css'
-import 'element-plus/theme-chalk/dark/css-vars.css'
 import './styles.css'
 
 import App from './App.vue'
@@ -12,8 +11,7 @@ import { usePlatformStore } from './stores/platform'
 const app = createApp(App)
 const pinia = createPinia()
 
-// 激活 Element Plus 暗黑模式
-document.documentElement.classList.add('dark')
+// document.documentElement.classList.add('dark')
 
 app.use(pinia)
 
