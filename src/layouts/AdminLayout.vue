@@ -14,7 +14,7 @@ import {
   ArrowDown,
   Monitor,
   SwitchButton,
-  Setting
+  Setting,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -50,14 +50,9 @@ const handleLogout = () => {
           </div>
           <span v-if="!isCollapse" class="brand-name">智慧三农</span>
         </div>
-        
+
         <el-scrollbar>
-          <el-menu
-            :default-active="activeMenu"
-            :collapse="isCollapse"
-            router
-            class="admin-menu"
-          >
+          <el-menu :default-active="activeMenu" :collapse="isCollapse" router class="admin-menu">
             <el-menu-item v-for="item in adminNav" :key="item.to" :index="item.to">
               <el-icon><component :is="item.icon" /></el-icon>
               <template #title>
@@ -69,7 +64,9 @@ const handleLogout = () => {
 
         <div class="aside-footer" v-if="!isCollapse">
           <div class="user-card" @click="handleLogout">
-            <el-avatar :size="32" class="avatar-green">{{ authStore.accountName?.slice(0, 1) || '管' }}</el-avatar>
+            <el-avatar :size="32" class="avatar-green">{{
+              authStore.accountName?.slice(0, 1) || '管'
+            }}</el-avatar>
             <div class="user-info">
               <div class="name">{{ authStore.accountName || '管理员' }}</div>
               <div class="role">退出系统</div>
@@ -85,30 +82,25 @@ const handleLogout = () => {
       <el-header class="admin-header">
         <div class="header-inner">
           <div class="header-left">
-            <el-button 
-              circle
-              class="toggle-btn" 
-              @click="isCollapse = !isCollapse"
-            >
+            <el-button circle class="toggle-btn" @click="isCollapse = !isCollapse">
               <el-icon>
                 <component :is="isCollapse ? Expand : Fold" />
               </el-icon>
             </el-button>
-            
+
             <div class="page-title">
-              {{ adminNav.find(n => n.to === route.path)?.label || '管理中心' }}
+              {{ adminNav.find((n) => n.to === route.path)?.label || '管理中心' }}
             </div>
           </div>
 
-          
-            <div class="header-right">
-              <el-link 
-                href="https://tongfengguan.github.io/farmerplatformdocs/" 
-                target="_blank" 
-                style="margin-right: 20px; font-size: 14px;"
-              >
-                寮€鍙戞枃妗?
-              </el-link>
+          <div class="header-right">
+            <el-link
+              href="https://tongfengguan.github.io/farmerplatformdocs/"
+              target="_blank"
+              style="margin-right: 20px; font-size: 14px"
+            >
+              项目文档
+            </el-link>
             <el-button round :icon="Monitor" @click="router.push('/')">返回前台</el-button>
           </div>
         </div>

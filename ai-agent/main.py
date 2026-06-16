@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, UserMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
 # 导入自定义引擎
 from engine import all_tools, get_help_text
@@ -89,7 +89,7 @@ async def analyze(request: Request, body: AnalyzeRequest):
             # 阶段 1: 意图识别与工具调用
             messages = [
                 SystemMessage(content="你是一个智慧三农专家助手。请调用工具获取实时数据。"),
-                UserMessage(content=question),
+                HumanMessage(content=question),
             ]
 
             response = await llm_with_tools.ainvoke(messages) # type: ignore
@@ -109,7 +109,7 @@ async def analyze(request: Request, body: AnalyzeRequest):
             # 阶段 2: 干净总结 (Safe Summary)
             summary_messages = [
                 SystemMessage(content="你是一个高效的数据分析师。请根据提供的业务数据给出精简的分析。要求：3-4个要点，每个点分段输出，总数200字内，严禁输出任何标签或思维链。"),
-                UserMessage(content=f"问题：${question}\n\n数据：${all_tool_results if all_tool_results else '未获取到外部数据'}\n\n请总结："),
+                HumanMessage(content=f"问题：${question}\n\n数据：${all_tool_results if all_tool_results else '未获取到外部数据'}\n\n请总结："),
             ]
 
             async for chunk in streaming_llm.astream(summary_messages): # type: ignore
